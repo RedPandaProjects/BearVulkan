@@ -16,7 +16,7 @@ static const char* ValidationLayers[] =
 	"VK_LAYER_KHRONOS_validation"
 };
 
-
+#ifdef DEBUG
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 	if (func != nullptr) {
@@ -36,6 +36,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 		func(instance, debugMessenger, pAllocator);
 	}
 }
+#endif
 VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0)
 {
 	VkApplicationInfo app_info = {};
@@ -56,7 +57,7 @@ VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0)
 	inst_info.enabledExtensionCount = sizeof(InstanceExtensions)/sizeof(const char*);
 	inst_info.ppEnabledExtensionNames = InstanceExtensions;
 #ifdef DEBUG
-	inst_info.enabledLayerCount = sizeof(ValidationLayers) / sizeof(const char*);
+	inst_info.enabledLayerCount = 0;// sizeof(ValidationLayers) / sizeof(const char*);
 	inst_info.ppEnabledLayerNames = ValidationLayers;
 	VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo;
 	DebugCreateInfo = {};
@@ -152,12 +153,12 @@ BearRenderBase::BearRenderInterfaceBase * VKRenderFactory::CreateInterface()
 
 BearRenderBase::BearRenderContextBase * VKRenderFactory::CreateContext()
 {
-	return nullptr;
+	return bear_new<VKRenderContext>(); 
 }
 
-BearRenderBase::BearRenderViewportBase * VKRenderFactory::CreateViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync)
+BearRenderBase::BearRenderViewportBase * VKRenderFactory::CreateViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearGraphics::BearRenderViewportDescription&Description)
 {
-	return bear_new<VKRenderViewport>(Handle,Width,Height,Fullscreen,VSync);
+	return bear_new<VKRenderViewport>(Handle,Width,Height,Fullscreen,VSync, Description);
 }
 
 BearRenderBase::BearRenderShaderBase * VKRenderFactory::CreateShader(BearGraphics::BearShaderType Type)

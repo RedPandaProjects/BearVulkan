@@ -1,7 +1,8 @@
 #include "vulkanPCH.h"
 
-VKRenderViewport::VKRenderViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync)
+VKRenderViewport::VKRenderViewport(void * Handle, bsize Width_, bsize Height_, bool Fullscreen, bool VSync, const BearGraphics::BearRenderViewportDescription&Description):Width(Width_),Height(Height_)
 {
+	ClearColor = Description.ClearColor;
 	{
 		VkWin32SurfaceCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -89,7 +90,7 @@ VKRenderViewport::VKRenderViewport(void * Handle, bsize Width, bsize Height, boo
 		VkAttachmentDescription attachments[2];
 		attachments[0].format = SwapChainImageFormat;
 		attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-		attachments[0].loadOp =  VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachments[0].loadOp = Description.Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
 		attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -151,10 +152,47 @@ VKRenderViewport::VKRenderViewport(void * Handle, bsize Width, bsize Height, boo
 			V_CHK(vkCreateFramebuffer(Factory->Device, &fb_info, NULL, &Framebuffers[i]));
 		}
 	}
+	{
+		VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+		imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+		imageAcquiredSemaphoreCreateInfo.flags = 0;
+
+		V_CHK( vkCreateSemaphore(Factory->Device, &imageAcquiredSemaphoreCreateInfo, NULL, &Semaphore));
+
+
+		// Get the index of the next available swapchain image:
+		V_CHK(vkAcquireNextImageKHR(Factory->Device,SwapChain, UINT64_MAX, Semaphore, VK_NULL_HANDLE,
+			&FrameIndex));
+	}
+	{
+		vkGetDeviceQueue(Factory->Device, indices.graphicsFamily, 0, &GraphicsQueue);
+		if (indices.graphicsFamily == indices.presentFamily) {
+			PresentQueue = GraphicsQueue;
+		}
+		else {
+			vkGetDeviceQueue(Factory->Device, indices.presentFamily, 0, &PresentQueue);
+		}
+		
+	}
+	{
+		VkFenceCreateInfo info = {};
+		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		vkCreateFence(Factory->Device, &info, nullptr, &Fence);
+		vkCreateFence(Factory->Device, &info, nullptr, &PresentFence);
+	}
 }
 
 VKRenderViewport::~VKRenderViewport()
 {
+	/*if (PresentQueue != GraphicsQueue)
+	{
+		vkDestroyQueue
+	}*/
+	vkDestroyFence(Factory->Device, Fence, 0);
+	vkDestroyFence(Factory->Device, PresentFence,0);
+	vkDestroySemaphore(Factory->Device, Semaphore, 0);
 	for (uint32_t i = 0; i < Framebuffers.size(); i++)
 	{
 		vkDestroyFramebuffer(Factory->Device, Framebuffers[i],0);
@@ -176,7 +214,7 @@ void VKRenderViewport::SetFullScreen(bool FullScreen)
 {
 }
 
-void VKRenderViewport::Resize(bsize Width, bsize Height)
+void VKRenderViewport::Resize(bsize width, bsize height)
 {
 }
 
@@ -185,8 +223,58 @@ void * VKRenderViewport::GetHandle()
 	return this;
 }
 
-void VKRenderViewport::Swap()
+void VKRenderViewport::Swap(const VkCommandBuffer &cmd)
 {
+	VkPipelineStageFlags stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.waitSemaphoreCount = 0;
+	submit_info.pWaitSemaphores = 0;
+	submit_info.signalSemaphoreCount = 0;
+	submit_info.pSignalSemaphores = &Semaphore;// &buf.acquire_semaphore;
+	submit_info.pWaitDstStageMask = &stage;
+	submit_info.pCommandBuffers = &cmd;
+	submit_info.commandBufferCount = 1;
+	V_CHK(vkQueueSubmit(GraphicsQueue, 1, &submit_info, Fence));
+
+	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
+	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.pNext = NULL;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &SwapChain;
+	presentInfo.pImageIndices = &FrameIndex;
+
+	V_CHK(vkQueuePresentKHR(PresentQueue, &presentInfo));
+	V_CHK(vkQueueSubmit(PresentQueue, 0, nullptr, PresentFence));
+	V_CHK(vkWaitForFences(Factory->Device, 1, &PresentFence, true, UINT64_MAX));
+	V_CHK(vkResetFences(Factory->Device, 1, &PresentFence));
+	V_CHK(vkAcquireNextImageKHR(Factory->Device, SwapChain, UINT64_MAX, Semaphore, VK_NULL_HANDLE,
+		&FrameIndex));
+
+}
+
+VkRenderPassBeginInfo VKRenderViewport::GetRenderPass()
+{
+	VkRenderPassBeginInfo rp_begin = {};
+	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	rp_begin.pNext = NULL;
+	rp_begin.renderPass = RenderPass;
+	rp_begin.framebuffer = Framebuffers[FrameIndex];
+	rp_begin.renderArea.offset.x = 0;
+	rp_begin.renderArea.offset.y = 0;
+	rp_begin.renderArea.extent.width = static_cast<uint32_t>( Width);
+	rp_begin.renderArea.extent.height = static_cast<uint32_t>(Height);
+	rp_begin.clearValueCount = 1;
+	VkClearValue clear_values[1];
+	clear_values[0].color.float32[3] = ClearColor.GetFloat().array[0];
+	clear_values[0].color.float32[2] = ClearColor.GetFloat().array[1];
+	clear_values[0].color.float32[1] = ClearColor.GetFloat().array[2];
+	clear_values[0].color.float32[0] = ClearColor.GetFloat().array[3];
+	rp_begin.pClearValues = clear_values;
+	return rp_begin;
 }
 
 VKRenderViewport::SwapChainSupportDetails VKRenderViewport::QuerySwapChainSupport()
@@ -234,13 +322,13 @@ VkPresentModeKHR VKRenderViewport::ChooseSwapPresentMode(const BearVector<VkPres
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D VKRenderViewport::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR & capabilities, bsize Width, bsize Height)
+VkExtent2D VKRenderViewport::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR & capabilities, bsize width, bsize height)
 {
 	if (capabilities.currentExtent.width != UINT32_MAX) {
 		return capabilities.currentExtent;
 	}
 	else {
-		VkExtent2D actualExtent = {static_cast<uint32_t>( Width),static_cast<uint32_t>(Height) };
+		VkExtent2D actualExtent = {static_cast<uint32_t>( width),static_cast<uint32_t>(height) };
 
 		actualExtent.width = bear_max(capabilities.minImageExtent.width, bear_min(capabilities.maxImageExtent.width, actualExtent.width));
 		actualExtent.height = bear_max(capabilities.minImageExtent.height, bear_min(capabilities.maxImageExtent.height, actualExtent.height));

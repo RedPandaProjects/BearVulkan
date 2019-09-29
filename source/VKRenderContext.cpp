@@ -20,6 +20,7 @@ VKRenderContext::VKRenderContext()
 
 	V_CHK(vkAllocateCommandBuffers(Factory->Device, &cmd, &CommandBuffer));
 //	vkFreeCommandBuffers
+
 }
 
 VKRenderContext::~VKRenderContext()
@@ -31,20 +32,37 @@ VKRenderContext::~VKRenderContext()
 
 void VKRenderContext::Flush()
 {
-	if (!m_viewport.empty())static_cast<VKRenderViewport*>(m_viewport->GetHandle())->Swap();
+	vkCmdEndRenderPass(CommandBuffer);
+	V_CHK(vkEndCommandBuffer(CommandBuffer));
+	if (!m_viewport.empty())static_cast<VKRenderViewport*>(m_viewport->GetHandle())->Swap(CommandBuffer);
 }
 
-
-void VKRenderContext::AttachViewport(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> Viewport)
+void VKRenderContext::AttachViewportAsFrameBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> Viewport)
 {
-	/*DetachViewport();
+//	DetachFrameBuffer();
+	m_viewport = Viewport;
+	
+
+}
+
+void VKRenderContext::DetachFrameBuffer()
+{
+	vkCmdEndRenderPass(CommandBuffer);
+	V_CHK(vkEndCommandBuffer(CommandBuffer));
+}
+
+void VKRenderContext::ClearFrameBuffer()
+{
+	auto SwapChain = static_cast<VKRenderViewport*>(m_viewport->GetHandle());
+
+
 	VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo;
 	{
 		CommandBufferInheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 		CommandBufferInheritanceInfo.pNext = nullptr;
 		CommandBufferInheritanceInfo.renderPass = 0;
 		CommandBufferInheritanceInfo.subpass = 0;
-		CommandBufferInheritanceInfo.framebuffer = static_cast<VKRenderViewport*>(m_viewport->GetHandle())->;
+		CommandBufferInheritanceInfo.framebuffer = static_cast<VKRenderViewport*>(m_viewport->GetHandle())->Framebuffers[SwapChain->FrameIndex];
 		CommandBufferInheritanceInfo.occlusionQueryEnable = VK_FALSE;
 		CommandBufferInheritanceInfo.queryFlags = 0;
 		CommandBufferInheritanceInfo.pipelineStatistics = 0;
@@ -54,17 +72,10 @@ void VKRenderContext::AttachViewport(BearGraphics::BearFactoryPointer<BearRender
 		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		CommandBufferBeginInfo.pNext = nullptr;
 		CommandBufferBeginInfo.flags = 0;
-		CommandBufferBeginInfo.pInheritanceInfo = &vk_commandBufferInheritanceInfo;
+		CommandBufferBeginInfo.pInheritanceInfo = &CommandBufferInheritanceInfo;
 	}
-	vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo);*/
-}
+	vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo);
+	auto RpBegin = SwapChain->GetRenderPass();
+	vkCmdBeginRenderPass(CommandBuffer, &RpBegin, VK_SUBPASS_CONTENTS_INLINE);
 
-void VKRenderContext::DetachViewport()
-{
-	//V_CHK(vkResetCommandBuffer(CommandBuffer, VkCommandBufferResetFlagBits::VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
-
-}
-
-void VKRenderContext::ClearColor(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderTargetViewBase> RenderTarget, const BearCore::BearColor Color)
-{
 }

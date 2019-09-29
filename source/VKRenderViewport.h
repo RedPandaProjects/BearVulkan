@@ -3,13 +3,14 @@ class VKRenderViewport :public BearRenderBase::BearRenderViewportBase
 {
 public:
 	BEAR_CLASS_NO_COPY(VKRenderViewport);
-	VKRenderViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync);
+	VKRenderViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearGraphics::BearRenderViewportDescription&Description);
 	virtual ~VKRenderViewport();
 	virtual void SetVSync(bool Sync);
 	virtual void SetFullScreen(bool FullScreen);
 	virtual void Resize(bsize Width, bsize Height);
 	virtual void*GetHandle();
-	void Swap();
+	void Swap(const VkCommandBuffer &cmd);
+	VkSemaphore Semaphore;
 	VkSwapchainKHR SwapChain;
 	BearVector<VkImage> SwapChainImages;
 	BearVector<VkImageView> SwapChainImageViews;
@@ -17,6 +18,15 @@ public:
 	VkFormat SwapChainImageFormat;
 	VkExtent2D SwapChainExtent;
 	VkRenderPass RenderPass;
+	BearCore::BearColor ClearColor;
+	uint32_t FrameIndex;
+	bsize Width;
+	bsize Height;
+	VkQueue GraphicsQueue;
+	VkQueue PresentQueue;
+	VkRenderPassBeginInfo GetRenderPass();
+	VkFence PresentFence;
+	VkFence Fence;
 private:
 
 	struct SwapChainSupportDetails 

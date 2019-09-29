@@ -7,9 +7,9 @@ public:
 	virtual ~VKRenderContext();
 
 	virtual void Flush();
-	virtual void AttachViewport(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> Viewport);
-	virtual void DetachViewport();
-	virtual void ClearColor(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderTargetViewBase> RenderTarget, const BearCore::BearColor Color);
+	virtual void AttachViewportAsFrameBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> Viewport);
+	virtual void DetachFrameBuffer();
+	virtual void ClearFrameBuffer();
 
 private:
 	BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> m_viewport;
