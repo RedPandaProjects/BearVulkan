@@ -15,6 +15,7 @@ public:
 	VkPhysicalDevice PhysicalDevice;
 	VkDevice Device;
 	uint32_t QueueFamilyIndex;
+	VkQueue Queue;
 #ifdef DEBUG
 	VkDebugUtilsMessengerEXT DebugMessenger;
 #endif

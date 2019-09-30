@@ -22,7 +22,7 @@ public:
 	uint32_t FrameIndex;
 	bsize Width;
 	bsize Height;
-	VkQueue GraphicsQueue;
+
 	VkQueue PresentQueue;
 	VkRenderPassBeginInfo GetRenderPass();
 	VkFence PresentFence;
@@ -41,13 +41,6 @@ private:
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, bsize Width, bsize Height);
 	VkSurfaceKHR Surface;
 
-	struct QueueFamilyIndices 
-	{
-		QueueFamilyIndices():graphicsFamily(0), presentFamily(0){}
-		uint32_t graphicsFamily;
-	
-		uint32_t presentFamily;
 
-	};
-	QueueFamilyIndices FindQueueFamilies();
+	uint32_t FindQueueFamilies();
 };

@@ -101,8 +101,10 @@ VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0)
 	if (QueueFamilyCount < 0)return;
 
 	bool found = false;
-	for (uint32_t  i = 0; i < QueueFamilyCount; i++) {
-		if (QueueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+	for (uint32_t  i = 0; i < QueueFamilyCount; i++)
+	{
+		if (QueueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) 
+		{
 			queue_info.queueFamilyIndex = i;
 			found = true;
 			break;
@@ -129,10 +131,14 @@ VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0)
 
 
 	res = vkCreateDevice(PhysicalDevice, &device_info, NULL, &Device);
-	if (res != VK_SUCCESS) { Device = 0; };
+	if (res != VK_SUCCESS) { Device = 0; }
+	else
+	{
 #ifdef DEBUG 
-	V_CHK(CreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
+		V_CHK(CreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
 #endif
+		vkGetDeviceQueue(Device, QueueFamilyIndex, 0, &Queue);
+	}
 }
 
 VKRenderFactory::~VKRenderFactory()

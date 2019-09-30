@@ -35,10 +35,10 @@ VKRenderViewport::VKRenderViewport(void * Handle, bsize Width_, bsize Height_, b
 	createInfo.imageArrayLayers = 1;
 	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	QueueFamilyIndices indices = FindQueueFamilies();
-	uint32_t queueFamilyIndices[] = { indices.graphicsFamily, indices.presentFamily };
+	auto PresentQueueFamilyIndex = FindQueueFamilies();
+	uint32_t queueFamilyIndices[] = { Factory->QueueFamilyIndex, PresentQueueFamilyIndex };
 
-	if (indices.graphicsFamily != indices.presentFamily)
+	if (Factory->QueueFamilyIndex != PresentQueueFamilyIndex)
 	{
 		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
@@ -166,12 +166,12 @@ VKRenderViewport::VKRenderViewport(void * Handle, bsize Width_, bsize Height_, b
 			&FrameIndex));
 	}
 	{
-		vkGetDeviceQueue(Factory->Device, indices.graphicsFamily, 0, &GraphicsQueue);
-		if (indices.graphicsFamily == indices.presentFamily) {
-			PresentQueue = GraphicsQueue;
+
+		if (PresentQueueFamilyIndex == Factory->QueueFamilyIndex) {
+			PresentQueue = Factory->Queue;
 		}
 		else {
-			vkGetDeviceQueue(Factory->Device, indices.presentFamily, 0, &PresentQueue);
+			vkGetDeviceQueue(Factory->Device, PresentQueueFamilyIndex, 0, &PresentQueue);
 		}
 		
 	}
@@ -235,7 +235,7 @@ void VKRenderViewport::Swap(const VkCommandBuffer &cmd)
 	submit_info.pWaitDstStageMask = &stage;
 	submit_info.pCommandBuffers = &cmd;
 	submit_info.commandBufferCount = 1;
-	V_CHK(vkQueueSubmit(GraphicsQueue, 1, &submit_info, Fence));
+	V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
 
 	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
 	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
@@ -268,11 +268,11 @@ VkRenderPassBeginInfo VKRenderViewport::GetRenderPass()
 	rp_begin.renderArea.extent.width = static_cast<uint32_t>( Width);
 	rp_begin.renderArea.extent.height = static_cast<uint32_t>(Height);
 	rp_begin.clearValueCount = 1;
-	VkClearValue clear_values[1];
-	clear_values[0].color.float32[3] = ClearColor.GetFloat().array[0];
-	clear_values[0].color.float32[2] = ClearColor.GetFloat().array[1];
-	clear_values[0].color.float32[1] = ClearColor.GetFloat().array[2];
-	clear_values[0].color.float32[0] = ClearColor.GetFloat().array[3];
+	static VkClearValue clear_values[1];
+	clear_values[0].color.float32[0] = ClearColor.GetFloat().array[0];
+	clear_values[0].color.float32[1] = ClearColor.GetFloat().array[1];
+	clear_values[0].color.float32[2] = ClearColor.GetFloat().array[2];
+	clear_values[0].color.float32[3] = ClearColor.GetFloat().array[3];
 	rp_begin.pClearValues = clear_values;
 	return rp_begin;
 }
@@ -337,43 +337,38 @@ VkExtent2D VKRenderViewport::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR & c
 	}
 }
 
-VKRenderViewport::QueueFamilyIndices VKRenderViewport::FindQueueFamilies()
+uint32_t VKRenderViewport::FindQueueFamilies()
 {
-	QueueFamilyIndices indices;
-	bool graphicsFamilyEmpty = false;
-	bool presentFamilyEmpty = false;
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(Factory->PhysicalDevice, &queueFamilyCount, nullptr);
 
 	BearVector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(Factory->PhysicalDevice, &queueFamilyCount, queueFamilies.data());
+	{
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(Factory->PhysicalDevice, Factory->QueueFamilyIndex, Surface, &presentSupport);
 
+		if (queueFamilies[Factory->QueueFamilyIndex].queueCount > 0 && presentSupport)
+		{
+			return Factory->QueueFamilyIndex;
+		}
+	}
 	int i = 0;
+	int64 result = -1;
 	for (const auto& queueFamily : queueFamilies)
 	{
-		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-		{
-			graphicsFamilyEmpty = true;
-			indices.graphicsFamily = i;
-
-		}
 
 		VkBool32 presentSupport = false;
 		vkGetPhysicalDeviceSurfaceSupportKHR(Factory->PhysicalDevice, i, Surface, &presentSupport);
 
 		if (queueFamily.queueCount > 0 && presentSupport)
 		{
-			presentFamilyEmpty = true;
-			indices.presentFamily = i;
+			result = i; break;
 		}
 
-		if (presentFamilyEmpty&&graphicsFamilyEmpty)
-		{
-			break;
-		}
 
-		i++;
 	}
 
-	return indices;
+	BEAR_ERRORMESSAGE(result >= 0, TEXT("Неудалось инициализировать vulkan для данного окна!!!"));
+	return static_cast<uint32_t>( result);
 }
