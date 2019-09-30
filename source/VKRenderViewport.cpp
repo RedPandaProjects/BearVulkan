@@ -179,7 +179,6 @@ VKRenderViewport::VKRenderViewport(void * Handle, bsize Width_, bsize Height_, b
 		VkFenceCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		vkCreateFence(Factory->Device, &info, nullptr, &Fence);
 		vkCreateFence(Factory->Device, &info, nullptr, &PresentFence);
 	}
 }
@@ -190,7 +189,6 @@ VKRenderViewport::~VKRenderViewport()
 	{
 		vkDestroyQueue
 	}*/
-	vkDestroyFence(Factory->Device, Fence, 0);
 	vkDestroyFence(Factory->Device, PresentFence,0);
 	vkDestroySemaphore(Factory->Device, Semaphore, 0);
 	for (uint32_t i = 0; i < Framebuffers.size(); i++)
@@ -223,22 +221,8 @@ void * VKRenderViewport::GetHandle()
 	return this;
 }
 
-void VKRenderViewport::Swap(const VkCommandBuffer &cmd)
+void VKRenderViewport::Swap()
 {
-	VkPipelineStageFlags stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	VkSubmitInfo submit_info = {};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.waitSemaphoreCount = 0;
-	submit_info.pWaitSemaphores = 0;
-	submit_info.signalSemaphoreCount = 0;
-	submit_info.pSignalSemaphores = &Semaphore;// &buf.acquire_semaphore;
-	submit_info.pWaitDstStageMask = &stage;
-	submit_info.pCommandBuffers = &cmd;
-	submit_info.commandBufferCount = 1;
-	V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
-
-	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
-	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
 
 	VkPresentInfoKHR presentInfo = {};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -268,12 +252,11 @@ VkRenderPassBeginInfo VKRenderViewport::GetRenderPass()
 	rp_begin.renderArea.extent.width = static_cast<uint32_t>( Width);
 	rp_begin.renderArea.extent.height = static_cast<uint32_t>(Height);
 	rp_begin.clearValueCount = 1;
-	static VkClearValue clear_values[1];
-	clear_values[0].color.float32[0] = ClearColor.GetFloat().array[0];
-	clear_values[0].color.float32[1] = ClearColor.GetFloat().array[1];
-	clear_values[0].color.float32[2] = ClearColor.GetFloat().array[2];
-	clear_values[0].color.float32[3] = ClearColor.GetFloat().array[3];
-	rp_begin.pClearValues = clear_values;
+	m_ÑlearValues[0].color.float32[0] = ClearColor.GetFloat().array[0];
+	m_ÑlearValues[0].color.float32[1] = ClearColor.GetFloat().array[1];
+	m_ÑlearValues[0].color.float32[2] = ClearColor.GetFloat().array[2];
+	m_ÑlearValues[0].color.float32[3] = ClearColor.GetFloat().array[3];
+	rp_begin.pClearValues = m_ÑlearValues;
 	return rp_begin;
 }
 

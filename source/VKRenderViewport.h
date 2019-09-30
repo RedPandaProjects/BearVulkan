@@ -9,7 +9,8 @@ public:
 	virtual void SetFullScreen(bool FullScreen);
 	virtual void Resize(bsize Width, bsize Height);
 	virtual void*GetHandle();
-	void Swap(const VkCommandBuffer &cmd);
+	void Swap();
+	
 	VkSemaphore Semaphore;
 	VkSwapchainKHR SwapChain;
 	BearVector<VkImage> SwapChainImages;
@@ -23,10 +24,10 @@ public:
 	bsize Width;
 	bsize Height;
 
+
 	VkQueue PresentQueue;
 	VkRenderPassBeginInfo GetRenderPass();
 	VkFence PresentFence;
-	VkFence Fence;
 private:
 
 	struct SwapChainSupportDetails 
@@ -35,6 +36,7 @@ private:
 		BearVector<VkSurfaceFormatKHR> formats;
 		BearVector<VkPresentModeKHR> presentModes;
 	};
+	VkClearValue m_ÑlearValues[1];
 	SwapChainSupportDetails QuerySwapChainSupport();
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const BearVector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR ChooseSwapPresentMode(const BearVector<VkPresentModeKHR>& availablePresentModes);
