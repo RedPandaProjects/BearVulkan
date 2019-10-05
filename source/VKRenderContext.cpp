@@ -25,11 +25,20 @@ VKRenderContext::VKRenderContext():m_Status(0)
 	info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 	V_CHK(vkCreateFence(Factory->Device, &info, nullptr, &Fence));
 
+	VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+	imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+	imageAcquiredSemaphoreCreateInfo.flags = 0;
+
+	V_CHK(vkCreateSemaphore(Factory->Device, &imageAcquiredSemaphoreCreateInfo, NULL, &SemaphoreWait));
+
+
 }
 
 VKRenderContext::~VKRenderContext()
 {
 	PreDestroy();
+	vkDestroySemaphore(Factory->Device, SemaphoreWait, 0);
 	vkDestroyFence(Factory->Device,Fence,0);
 	VkCommandBuffer cmd_bufs[1] = { CommandBuffer };
 	vkFreeCommandBuffers(Factory->Device, CommandPool, 1, cmd_bufs);
@@ -62,9 +71,9 @@ void VKRenderContext::Flush(bool wait)
 		auto viewport = static_cast<VKRenderViewport*>(m_viewport->GetHandle());
 		VkSubmitInfo submit_info = {};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.waitSemaphoreCount = 0;
-		submit_info.pWaitSemaphores = 0;
-		submit_info.signalSemaphoreCount = 0;
+		submit_info.waitSemaphoreCount = 1;
+		submit_info.pWaitSemaphores = &SemaphoreWait;
+		submit_info.signalSemaphoreCount =1;
 		submit_info.pSignalSemaphores = &viewport->Semaphore;// &buf.acquire_semaphore;
 		submit_info.pWaitDstStageMask = &stage;
 		submit_info.pCommandBuffers = &CommandBuffer;

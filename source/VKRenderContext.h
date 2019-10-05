@@ -19,4 +19,5 @@ private:
 	BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> m_viewport;
 	VkCommandPool CommandPool;
 	VkCommandBuffer CommandBuffer;
+	VkSemaphore SemaphoreWait;
 };

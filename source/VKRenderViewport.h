@@ -12,6 +12,7 @@ public:
 	void Swap();
 	
 	VkSemaphore Semaphore;
+
 	VkSwapchainKHR SwapChain;
 	BearVector<VkImage> SwapChainImages;
 	BearVector<VkImageView> SwapChainImageViews;
@@ -23,13 +24,14 @@ public:
 	uint32_t FrameIndex;
 	bsize Width;
 	bsize Height;
-
+	bool VSync;
 
 	VkQueue PresentQueue;
 	VkRenderPassBeginInfo GetRenderPass();
 	VkFence PresentFence;
 private:
-
+	BearGraphics::BearRenderViewportDescription Description;
+	uint32_t m_PresentQueueFamilyIndex;
 	struct SwapChainSupportDetails 
 	{
 		VkSurfaceCapabilitiesKHR capabilities;
@@ -39,10 +41,20 @@ private:
 	VkClearValue m_ÑlearValues[1];
 	SwapChainSupportDetails QuerySwapChainSupport();
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const BearVector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR ChooseSwapPresentMode(const BearVector<VkPresentModeKHR>& availablePresentModes);
+	VkPresentModeKHR ChooseSwapPresentMode(const BearVector<VkPresentModeKHR>& availablePresentModes,bool vsync);
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, bsize Width, bsize Height);
 	VkSurfaceKHR Surface;
 
 
 	uint32_t FindQueueFamilies();
+
+	void CreateSwapChain(bsize Width, bsize Height,bool vsync);
+	void CreateImageView();
+	void DestroyImageView();
+	void DestroySwapChain(VkSwapchainKHR swapChain);
+	void CreateFrameBuffers();
+	void DestroyFrameBuffers();
+	bool m_FullScreen;
+	HWND m_WindowHandle;
+
 };
