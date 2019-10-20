@@ -12,5 +12,8 @@ using namespace BearCore;
 #include "VKRenderViewport.h"
 #include "VKRenderContext.h"
 #include "VKRenderFactory.h"
+
+#include "VKRenderIndexBuffer.h"
+#include "VKRenderVertexBuffer.h"
 extern VKRenderFactory *Factory;
 #define V_CHK(a) BEAR_ASSERT(a==VK_SUCCESS)

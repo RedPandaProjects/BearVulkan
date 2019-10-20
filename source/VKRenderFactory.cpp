@@ -129,6 +129,7 @@ VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0)
 	device_info.ppEnabledLayerNames = NULL;
 	device_info.pEnabledFeatures = NULL;
 
+	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 
 	res = vkCreateDevice(PhysicalDevice, &device_info, NULL, &Device);
 	if (res != VK_SUCCESS) { Device = 0; }
@@ -146,6 +147,7 @@ VKRenderFactory::~VKRenderFactory()
 #ifdef DEBUG 
 	DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
 #endif
+	
 	if (Device)
 		vkDestroyDevice(Device, NULL);
 	if(Instance)
@@ -170,4 +172,14 @@ BearRenderBase::BearRenderViewportBase * VKRenderFactory::CreateViewport(void * 
 BearRenderBase::BearRenderShaderBase * VKRenderFactory::CreateShader(BearGraphics::BearShaderType Type)
 {
 	return nullptr;
+}
+
+BearRenderBase::BearRenderIndexBufferBase * VKRenderFactory::CreateIndexBuffer()
+{
+	return bear_new<VKRenderIndexBuffer>();
+}
+
+BearRenderBase::BearRenderVertexBufferBase * VKRenderFactory::CreateVertexBuffer()
+{
+	return bear_new<VKRenderVertexBuffer>();
 }
