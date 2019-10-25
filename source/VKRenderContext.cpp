@@ -31,7 +31,16 @@ VKRenderContext::VKRenderContext():m_Status(0)
 	imageAcquiredSemaphoreCreateInfo.flags = 0;
 
 	V_CHK(vkCreateSemaphore(Factory->Device, &imageAcquiredSemaphoreCreateInfo, NULL, &SemaphoreWait));
-
+	Viewport.width = 1;
+	Viewport.height = 1;
+	Viewport.x = Viewport.y = 0;
+	Viewport.maxDepth = 1;
+	Viewport.minDepth = 0;
+	Scissor.offset.x = 0;
+	Scissor.offset.y = 0;
+	Scissor.extent.width = 1;
+	Scissor.extent.width = 1;
+	ScissorEnable = false;
 
 }
 
@@ -91,10 +100,10 @@ void VKRenderContext::Flush(bool wait)
 
 
 
-void VKRenderContext::AttachViewportAsFrameBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> Viewport)
+void VKRenderContext::AttachViewportAsFrameBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> Viewport_)
 {
 	DetachFrameBuffer();
-	m_viewport = Viewport;
+	m_viewport = Viewport_;
 
 }
 
@@ -132,35 +141,89 @@ void VKRenderContext::ClearFrameBuffer()
 	vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo);
 	auto RpBegin = SwapChain->GetRenderPass();
 	vkCmdBeginRenderPass(CommandBuffer, &RpBegin, VK_SUBPASS_CONTENTS_INLINE);
+	{
+		vkCmdSetViewport(CommandBuffer, 0, 1, &Viewport);
+		if (!ScissorEnable)
+		{
+			Scissor.offset.x = static_cast<int32>(Viewport.x);
+			Scissor.offset.y = static_cast<int32>(Viewport.height)  +static_cast<int32>(Viewport.y);
+			Scissor.extent.width = static_cast<uint32>(Viewport.width);
+			Scissor.extent.height = static_cast<uint32>(abs(Viewport.height));
+
+		}
+		vkCmdSetScissor(CommandBuffer,0,1,&Scissor);
+	}
 
 }
 
 void VKRenderContext::SetPipeline(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderPipelineBase> Pipeline)
 {
+	if (m_Status != 1|| Pipeline.get()==0)return;
+
+	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VKRenderPipeline*>(Pipeline.get())->Pipeline);
 }
 
 void VKRenderContext::SetVertexBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderVertexBufferBase> buffer)
 {
+	if (m_Status != 1 || buffer.get() == 0)return;
+	VkDeviceSize offset = 0;
+	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &static_cast<VKRenderVertexBuffer*>(buffer.get())->Buffer, &offset);
 }
 
 void VKRenderContext::SetIndexBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderIndexBufferBase> buffer)
 {
+	if (m_Status != 1 || buffer.get() == 0)return;
+	vkCmdBindIndexBuffer(CommandBuffer, static_cast<VKRenderIndexBuffer*>(buffer.get())->Buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
 }
 
 void VKRenderContext::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
 {
+	Viewport.x = x;
+	Viewport.y = height - y;
+	Viewport.width = width;
+	Viewport.height = -height;
+	Viewport.maxDepth = maxDepth;
+	Viewport.minDepth = minDepth;
+	if (m_Status == 1)
+	{
+
+		vkCmdSetViewport(CommandBuffer, 0, 1, &Viewport);
+
+		if (!ScissorEnable)
+		{
+			Scissor.offset.x = static_cast<int32>(Viewport.x);
+			Scissor.offset.y = static_cast<int32>(Viewport.y);
+			Scissor.extent.width = static_cast<uint32>(Viewport.width);
+			Scissor.extent.height = static_cast<uint32>(Viewport.height);
+		}
+		vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
+	}
 }
 
 void VKRenderContext::SetScissor(bool Enable, float x, float y, float x1, float y1)
 {
+	ScissorEnable = Enable;
+	Scissor.offset.x =static_cast<int32>( x);
+	Scissor.offset.y = static_cast<int32>(x);;
+	Scissor.extent.width = static_cast<uint32>(x1);
+	Scissor.extent.height = static_cast<uint32>(y1);
+	if (m_Status != 1)return;
+	if (ScissorEnable)
+	{
+		vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
+	}
 }
 
 void VKRenderContext::Draw(bsize count, bsize offset)
 {
+	if (m_Status != 1 )return;
+	vkCmdDraw(CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset) , 0);
 }
 
 void VKRenderContext::DrawIndex(bsize count, bsize offset)
 {
+	if (m_Status != 1 )return;
+	vkCmdDrawIndexed(CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset), 0,0);
 }
 
 void VKRenderContext::PreDestroy()

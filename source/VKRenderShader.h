@@ -6,7 +6,7 @@ public:
 	VKRenderShader(BearGraphics::BearShaderType type);
 	virtual ~VKRenderShader();
 	virtual bool CompileText(const bchar*Text, BearCore::BearString &OutError);
-	VkShaderModule Shader;
+	VkPipelineShaderStageCreateInfo Shader;
 	inline bool IsType(BearGraphics::BearShaderType type)const { return Type == type; }
 private:
 	BearGraphics::BearShaderType Type;

@@ -15,6 +15,7 @@ public:
 	virtual BearRenderBase::BearRenderVertexBufferBase* CreateVertexBuffer();
 	inline bool Empty()const { return Instance==0; }
 public:
+	VkPipelineCache PipelineCacheDefault;
 	VkInstance Instance;
 	VkPhysicalDevice PhysicalDevice;
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;

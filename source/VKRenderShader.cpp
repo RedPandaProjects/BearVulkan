@@ -1,68 +1,50 @@
 #include "vulkanPCH.h"
-inline bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
-#ifndef __ANDROID__
-	
-	EShLanguage stage = EShLangVertex;
-	glslang::TShader shader(stage);
-	glslang::TProgram program;
-	const char *shaderStrings[1];
-	TBuiltInResource Resources = {};
-	//init_resources(Resources);
-
-	// Enable SPIR-V and Vulkan rules when parsing GLSL
-	EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
-
-	shaderStrings[0] = pshader;
-	shader.setStrings(shaderStrings, 1);
-
-	if (!shader.parse(&Resources, 100, false, messages)) {
-		puts(shader.getInfoLog());
-		puts(shader.getInfoDebugLog());
-		return false;  // something didn't work
-	}
-
-	program.addShader(&shader);
-
-	//
-	// Program-level processing...
-	//
-
-	if (!program.link(messages)) {
-		puts(shader.getInfoLog());
-		puts(shader.getInfoDebugLog());
-		fflush(stdout);
-		return false;
-	}
-
-	glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
-#else
-	// On Android, use shaderc instead.
-	shaderc::Compiler compiler;
-	shaderc::SpvCompilationResult module =
-		compiler.CompileGlslToSpv(pshader, strlen(pshader), MapShadercType(shader_type), "shader");
-	if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
-		LOGE("Error: Id=%d, Msg=%s", module.GetCompilationStatus(), module.GetErrorMessage().c_str());
-		return false;
-	}
-	spirv.assign(module.cbegin(), module.cend());
-#endif
-	return true;
-}
+extern bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv,BearString&out);
 
 
-VKRenderShader::VKRenderShader(BearGraphics::BearShaderType type) :Type(type), Shader(0)
+VKRenderShader::VKRenderShader(BearGraphics::BearShaderType type) :Type(type)
 
 {
-
+	Shader.module = 0;
 }
 
 VKRenderShader::~VKRenderShader()
 {
-	if (Shader)vkDestroyShaderModule(Factory->Device, Shader, 0);
+	if (Shader.module)vkDestroyShaderModule(Factory->Device, Shader.module, 0);
 }
 
-bool VKRenderShader::CompileText(const bchar * Text, BearCore::BearString & OutError)
+bool VKRenderShader::CompileText(const bchar * text, BearCore::BearString & OutError)
 {
-	//GLStoSpn();
-	return false;
+	bool  retVal;
+	std::vector<unsigned int> vtx_spv;
+	Shader.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	Shader.pNext = NULL;
+	Shader.pSpecializationInfo = NULL;
+	Shader.flags = 0;
+	switch (Type)
+	{
+	case BearGraphics::ST_Vertex:
+		Shader.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		break;
+	case BearGraphics::ST_Pixel:
+		Shader.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		break;
+	default:
+		Shader.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		break;
+	}
+
+	Shader.pName = "main";
+
+	retVal = GLSLtoSPV(Shader.stage, *BearCore::BearEncoding::ToANSI(text), vtx_spv, OutError);
+	assert(retVal);
+	VkShaderModuleCreateInfo moduleCreateInfo;
+	moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	moduleCreateInfo.pNext = NULL;
+	moduleCreateInfo.flags = 0;
+	moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
+	moduleCreateInfo.pCode = vtx_spv.data();
+	V_CHK(  vkCreateShaderModule(Factory->Device, &moduleCreateInfo, NULL, &Shader.module));
+
+	return true;
 }

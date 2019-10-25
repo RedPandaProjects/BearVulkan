@@ -27,4 +27,9 @@ private:
 	VkCommandPool CommandPool;
 	VkCommandBuffer CommandBuffer;
 	VkSemaphore SemaphoreWait;
+
+	VkViewport Viewport;
+	VkRect2D Scissor;
+
+	bool ScissorEnable;
 };

@@ -37,7 +37,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 	}
 }
 #endif
-VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0)
+VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0)
 {
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -140,6 +140,15 @@ VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0)
 #endif
 		vkGetDeviceQueue(Device, QueueFamilyIndex, 0, &Queue);
 	}
+	{
+		VkPipelineCacheCreateInfo PipelineCache;
+		PipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+		PipelineCache.pNext = NULL;
+		PipelineCache.initialDataSize = 0;
+		PipelineCache.pInitialData = NULL;
+		PipelineCache.flags = 0;
+		V_CHK(vkCreatePipelineCache(Device, &PipelineCache, 0, &PipelineCacheDefault));
+	}
 }
 
 VKRenderFactory::~VKRenderFactory()
@@ -147,11 +156,13 @@ VKRenderFactory::~VKRenderFactory()
 #ifdef DEBUG 
 	DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
 #endif
-	
+	if (PipelineCacheDefault)
+		vkDestroyPipelineCache(Device,PipelineCacheDefault,0);
 	if (Device)
 		vkDestroyDevice(Device, NULL);
 	if(Instance)
 		vkDestroyInstance(Instance, NULL);
+
 }
 
 BearRenderBase::BearRenderInterfaceBase * VKRenderFactory::CreateInterface()
@@ -171,12 +182,12 @@ BearRenderBase::BearRenderViewportBase * VKRenderFactory::CreateViewport(void * 
 
 BearRenderBase::BearRenderShaderBase * VKRenderFactory::CreateShader(BearGraphics::BearShaderType Type)
 {
-	return nullptr;
+	return bear_new<VKRenderShader>(Type);
 }
 
 BearRenderBase::BearRenderPipelineBase * VKRenderFactory::CreatePipeline(const BearGraphics::BearRenderPipelineDescription & Descruotion)
 {
-	return nullptr;
+	return  bear_new<VKRenderPipeline>(Descruotion);;
 }
 
 BearRenderBase::BearRenderIndexBufferBase * VKRenderFactory::CreateIndexBuffer()

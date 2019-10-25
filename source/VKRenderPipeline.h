@@ -5,4 +5,5 @@ class VKRenderPipeline :public BearRenderBase::BearRenderPipelineBase
 public:
 	VKRenderPipeline(const BearGraphics::BearRenderPipelineDescription&desc);
 	virtual ~VKRenderPipeline();
+	VkPipeline Pipeline;
 };

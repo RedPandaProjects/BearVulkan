@@ -1,4 +1,5 @@
 #include "vulkanPCH.h"
+#include "glslang/Public/ShaderLang.h"
 VKRenderFactory *Factory = 0;
 void RenderInitialize()
 {
@@ -7,6 +8,7 @@ void RenderInitialize()
 	{
 		GRenderFactoty = Factory;
 		BEAR_ASSERT(GRenderFactoty);
+		glslang::InitializeProcess();
 		return;
 	}
 	BearCore::bear_delete(Factory);
@@ -17,6 +19,7 @@ void RenderDestroy()
 {
 	if (GRenderFactoty)
 	{
+		glslang::FinalizeProcess();
 		BearCore::bear_delete(Factory);
 		GRenderFactoty = 0;
 	}

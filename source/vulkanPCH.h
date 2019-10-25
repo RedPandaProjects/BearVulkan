@@ -1,5 +1,5 @@
 #pragma once
-#include "GlslangToSpv.h"
+#include "SPIRV/GlslangToSpv.h"
 #include "BearRenderBase.h"
 #ifdef WINDOWS
 #ifndef VK_USE_PLATFORM_WIN32_KHR
