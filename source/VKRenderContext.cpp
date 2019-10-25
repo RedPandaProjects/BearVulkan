@@ -135,6 +135,34 @@ void VKRenderContext::ClearFrameBuffer()
 
 }
 
+void VKRenderContext::SetPipeline(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderPipelineBase> Pipeline)
+{
+}
+
+void VKRenderContext::SetVertexBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderVertexBufferBase> buffer)
+{
+}
+
+void VKRenderContext::SetIndexBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderIndexBufferBase> buffer)
+{
+}
+
+void VKRenderContext::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
+{
+}
+
+void VKRenderContext::SetScissor(bool Enable, float x, float y, float x1, float y1)
+{
+}
+
+void VKRenderContext::Draw(bsize count, bsize offset)
+{
+}
+
+void VKRenderContext::DrawIndex(bsize count, bsize offset)
+{
+}
+
 void VKRenderContext::PreDestroy()
 {
 	if (m_Status == 1)Flush(true);

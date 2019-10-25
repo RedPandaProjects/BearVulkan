@@ -1,4 +1,5 @@
 #pragma once
+#include "GlslangToSpv.h"
 #include "BearRenderBase.h"
 #ifdef WINDOWS
 #ifndef VK_USE_PLATFORM_WIN32_KHR
@@ -15,5 +16,9 @@ using namespace BearCore;
 
 #include "VKRenderIndexBuffer.h"
 #include "VKRenderVertexBuffer.h"
+
+#include "VKRenderPipeline.h"
+#include "VKRenderShader.h"
+
 extern VKRenderFactory *Factory;
 #define V_CHK(a) BEAR_ASSERT(a==VK_SUCCESS)

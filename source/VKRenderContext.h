@@ -11,6 +11,13 @@ public:
 	virtual void DetachFrameBuffer();
 	virtual void ClearFrameBuffer();
 
+	virtual void SetPipeline(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderPipelineBase> Pipeline);
+	virtual void SetVertexBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderVertexBufferBase> buffer);
+	virtual void SetIndexBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderIndexBufferBase> buffer);
+	virtual void SetViewport(float x, float y, float width, float height, float minDepth = 0.f, float maxDepth = 1.f);
+	virtual void SetScissor(bool Enable, float x, float y, float x1, float y1);
+	virtual void Draw(bsize count, bsize offset = 0);
+	virtual void DrawIndex(bsize count, bsize offset = 0);
 private:
 	void PreDestroy();
 	int UpdateStatus();

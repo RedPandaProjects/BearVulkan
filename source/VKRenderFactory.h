@@ -10,6 +10,7 @@ public:
 	virtual BearRenderBase::BearRenderViewportBase* CreateViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearGraphics::BearRenderViewportDescription&Description);
 	virtual BearRenderBase::BearRenderShaderBase* CreateShader(BearGraphics::BearShaderType Type);
 
+	virtual  BearRenderBase::BearRenderPipelineBase*   CreatePipeline(const BearGraphics::BearRenderPipelineDescription&Descruotion);
 	virtual BearRenderBase::BearRenderIndexBufferBase* CreateIndexBuffer();
 	virtual BearRenderBase::BearRenderVertexBufferBase* CreateVertexBuffer();
 	inline bool Empty()const { return Instance==0; }

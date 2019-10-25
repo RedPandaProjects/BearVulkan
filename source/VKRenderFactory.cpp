@@ -174,6 +174,11 @@ BearRenderBase::BearRenderShaderBase * VKRenderFactory::CreateShader(BearGraphic
 	return nullptr;
 }
 
+BearRenderBase::BearRenderPipelineBase * VKRenderFactory::CreatePipeline(const BearGraphics::BearRenderPipelineDescription & Descruotion)
+{
+	return nullptr;
+}
+
 BearRenderBase::BearRenderIndexBufferBase * VKRenderFactory::CreateIndexBuffer()
 {
 	return bear_new<VKRenderIndexBuffer>();
