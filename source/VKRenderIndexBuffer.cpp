@@ -1,14 +1,16 @@
 #include "vulkanPCH.h"
-
+#include "VKRenderBufferTool.h"
 VKRenderIndexBuffer::VKRenderIndexBuffer()
 {
 	Buffer = 0;
 	Memory = 0;
-
+	m_dynamic = false;
+	m_buffer = 0;
 }
 
 VKRenderIndexBuffer::~VKRenderIndexBuffer()
 {
+	Clear();
 }
 inline bool Test(uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
 
@@ -29,36 +31,17 @@ inline bool Test(uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeInd
 void VKRenderIndexBuffer::Create(bsize count, void * data, bool dynamic)
 {
 	Clear();
-	VkBufferCreateInfo Info = {};
-	Info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	Info.pNext = NULL;
-	Info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-	Info.size = count *sizeof(int32);
-	Info.queueFamilyIndexCount = 0;
-	Info.pQueueFamilyIndices = NULL;
-	Info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-	Info.flags = 0;
+	m_dynamic = dynamic;
 
-	V_CHK(vkCreateBuffer(Factory->Device, &Info, NULL, &Buffer));
+	if (dynamic)
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, count * sizeof(uint32), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Buffer, Memory);
+	else
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, count * sizeof(uint32), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Buffer, Memory);
 
-
-
-	vkGetBufferMemoryRequirements(Factory->Device, Buffer, &MRequirements);
-
-	VkMemoryAllocateInfo AllocateInfo = {};
-	AllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	AllocateInfo.pNext = NULL;
-	AllocateInfo.memoryTypeIndex = 0;
-	AllocateInfo.allocationSize = MRequirements.size;
-
-
-	BEAR_ASSERT(Test(MRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &AllocateInfo.memoryTypeIndex))
-
-
-	V_CHK(vkAllocateMemory(Factory->Device, &AllocateInfo, NULL, &Memory));
+	m_size = count * sizeof(uint32);
 	if (data)
 	{
-		bear_copy(Lock(), data, sizeof(int32)*count);
+		bear_copy(Lock(), data, count * sizeof(uint32));
 		Unlock();
 	}
 }
@@ -66,20 +49,56 @@ void VKRenderIndexBuffer::Create(bsize count, void * data, bool dynamic)
 int32 * VKRenderIndexBuffer::Lock()
 {
 	if (Memory == 0)return 0;
-	uint8_t *pData;
-	V_CHK(vkMapMemory(Factory->Device, Memory, 0, MRequirements.size, 0, (void **)&pData));
-	return (int32*)pData;
+	if (m_dynamic)
+	{
+		uint8_t *pData;
+		V_CHK(vkMapMemory(Factory->Device, Memory, 0, m_size, 0, (void **)&pData));
+		return (int32*)pData;
+	}
+	else
+	{
+		if (m_buffer)
+			bear_free(m_buffer);
+		m_buffer = bear_alloc<uint8>(m_size);
+		return (int32*)m_buffer;
+	}
 }
 
 void VKRenderIndexBuffer::Unlock()
 {
 	if (Memory == 0)return;
-	vkUnmapMemory(Factory->Device, Memory);
-	V_CHK(vkBindBufferMemory(Factory->Device, Buffer, Memory, 0));
+	if (m_dynamic)
+	{
+		vkUnmapMemory(Factory->Device, Memory);
+		V_CHK(vkBindBufferMemory(Factory->Device, Buffer, Memory, 0));
+	}
+	else if (m_buffer)
+	{
+		VkBuffer BufferTemp;
+		VkDeviceMemory MemoryTemp;
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, m_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, BufferTemp, MemoryTemp);
+		{
+			uint8_t *pData;
+			V_CHK(vkMapMemory(Factory->Device, MemoryTemp, 0, m_size, 0, (void **)&pData));
+			bear_copy(pData, m_buffer, m_size);
+			vkUnmapMemory(Factory->Device, MemoryTemp);
+			V_CHK(vkBindBufferMemory(Factory->Device, BufferTemp, MemoryTemp, 0));
+		}
+		CopyBuffer(BufferTemp, Buffer, m_size);
+		vkDestroyBuffer(Factory->Device, BufferTemp, 0);
+		vkFreeMemory(Factory->Device, MemoryTemp, 0);
+		bear_free(m_buffer);
+		m_buffer = 0;
+	}
 }
 
 void VKRenderIndexBuffer::Clear()
 {
+	m_size = 0;
+	m_dynamic = false;
+	if (m_buffer)
+		bear_free(m_buffer);
+	m_buffer = 0;
 	if (Buffer)vkDestroyBuffer(Factory->Device, Buffer, 0);
 	Buffer = 0;
 	if (Memory)vkFreeMemory(Factory->Device, Memory, 0);

@@ -22,11 +22,12 @@ private:
 	void PreDestroy();
 	int UpdateStatus();
 	int8 m_Status;
-	VkFence Fence;
+
 	BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> m_viewport;
 	VkCommandPool CommandPool;
 	VkCommandBuffer CommandBuffer;
 	VkSemaphore SemaphoreWait;
+	VkFence Fence;
 
 	VkViewport Viewport;
 	VkRect2D Scissor;

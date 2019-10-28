@@ -24,5 +24,13 @@ public:
 	VkQueue Queue;
 #ifdef DEBUG
 	VkDebugUtilsMessengerEXT DebugMessenger;
+public:
+	VkCommandBuffer CommandBuffer;
+	void LockCommandBuffer();
+	void UnlockCommandBuffer();
+private:
+	BearMutex m_CommandMutex;
+	VkCommandPool m_CommandPool;
+
 #endif
 };

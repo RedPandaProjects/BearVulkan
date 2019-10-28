@@ -138,7 +138,7 @@ void VKRenderContext::ClearFrameBuffer()
 		CommandBufferBeginInfo.flags = 0;
 		CommandBufferBeginInfo.pInheritanceInfo = &CommandBufferInheritanceInfo;
 	}
-	vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo);
+	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
 	auto RpBegin = SwapChain->GetRenderPass();
 	vkCmdBeginRenderPass(CommandBuffer, &RpBegin, VK_SUBPASS_CONTENTS_INLINE);
 	{

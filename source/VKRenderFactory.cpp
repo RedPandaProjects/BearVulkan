@@ -37,7 +37,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 	}
 }
 #endif
-VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0)
+VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0), m_CommandPool(0),CommandBuffer(0)
 {
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -149,10 +149,42 @@ VKRenderFactory::VKRenderFactory():Instance(0), PhysicalDevice(0), Device(0), Pi
 		PipelineCache.flags = 0;
 		V_CHK(vkCreatePipelineCache(Device, &PipelineCache, 0, &PipelineCacheDefault));
 	}
+	{
+		VkCommandPoolCreateInfo cmd_pool_info = {};
+		cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		cmd_pool_info.pNext = NULL;
+		cmd_pool_info.queueFamilyIndex = QueueFamilyIndex;
+		cmd_pool_info.flags = 0;
+
+		V_CHK(vkCreateCommandPool(Device, &cmd_pool_info, NULL, &m_CommandPool));
+
+
+		VkCommandBufferAllocateInfo cmd = {};
+		cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		cmd.pNext = NULL;
+		cmd.commandPool = m_CommandPool;
+		cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		cmd.commandBufferCount = 1;
+
+		V_CHK(vkAllocateCommandBuffers(Device, &cmd, &CommandBuffer));
+		//	vkFreeCommandBuffers
+	}
 }
 
 VKRenderFactory::~VKRenderFactory()
 {
+	{
+		if (!m_CommandMutex.TryLock())
+		{
+			UnlockCommandBuffer();
+		}
+
+	}
+	{
+		VkCommandBuffer cmd_bufs[1] = { CommandBuffer };
+		vkFreeCommandBuffers(Device, m_CommandPool, 1, cmd_bufs);
+		vkDestroyCommandPool(Device, m_CommandPool, NULL);
+	}
 #ifdef DEBUG 
 	DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
 #endif
@@ -198,4 +230,28 @@ BearRenderBase::BearRenderIndexBufferBase * VKRenderFactory::CreateIndexBuffer()
 BearRenderBase::BearRenderVertexBufferBase * VKRenderFactory::CreateVertexBuffer()
 {
 	return bear_new<VKRenderVertexBuffer>();
+}
+
+void VKRenderFactory::LockCommandBuffer()
+{
+	m_CommandMutex.Lock();
+	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+	{
+		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	}
+	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+}
+
+void VKRenderFactory::UnlockCommandBuffer()
+{
+	V_CHK(vkEndCommandBuffer(CommandBuffer));
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &CommandBuffer;
+	V_CHK(vkQueueSubmit(Queue, 1, &submitInfo, VK_NULL_HANDLE));
+	V_CHK(vkQueueWaitIdle(Queue));
+
+	m_CommandMutex.Unlock();
 }

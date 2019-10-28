@@ -11,6 +11,8 @@ public:
 	VkBuffer Buffer;
 
 private:
-	VkMemoryRequirements MRequirements;
 	VkDeviceMemory Memory;
+	bool m_dynamic;
+	uint8*m_buffer;
+	bsize m_size;
 };
