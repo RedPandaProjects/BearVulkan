@@ -62,6 +62,7 @@ VKRenderViewport::~VKRenderViewport()
 	{
 		vkDestroyQueue
 	}*/
+	
 	vkDestroyFence(Factory->Device, PresentFence,0);
 	vkDestroySemaphore(Factory->Device, Semaphore, 0);
 	DestroySwapChain(SwapChain);

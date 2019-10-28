@@ -26,7 +26,7 @@ inline bool Test(uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeInd
 	return false;
 }
 
-void VKRenderVertexBuffer::Create(bsize stride, bsize count, void * data)
+void VKRenderVertexBuffer::Create(bsize stride, bsize count, void * data, bool dynamic )
 {
 	Clear();
 	VkBufferCreateInfo Info = {};
