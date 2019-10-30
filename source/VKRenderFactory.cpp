@@ -232,6 +232,11 @@ BearRenderBase::BearRenderVertexBufferBase * VKRenderFactory::CreateVertexBuffer
 	return bear_new<VKRenderVertexBuffer>();
 }
 
+BearRenderBase::BearRenderUniformBufferBase * VKRenderFactory::CreateUniformBuffer()
+{
+	return bear_new<VKRenderUniformBuffer>();
+}
+
 void VKRenderFactory::LockCommandBuffer()
 {
 	m_CommandMutex.Lock();

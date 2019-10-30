@@ -13,6 +13,7 @@ public:
 	virtual  BearRenderBase::BearRenderPipelineBase*   CreatePipeline(const BearGraphics::BearRenderPipelineDescription&Descruotion);
 	virtual BearRenderBase::BearRenderIndexBufferBase* CreateIndexBuffer();
 	virtual BearRenderBase::BearRenderVertexBufferBase* CreateVertexBuffer();
+	virtual BearRenderBase::BearRenderUniformBufferBase* CreateUniformBuffer();
 	inline bool Empty()const { return Instance==0; }
 public:
 	VkPipelineCache PipelineCacheDefault;

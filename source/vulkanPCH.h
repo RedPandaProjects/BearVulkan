@@ -16,6 +16,7 @@ using namespace BearCore;
 
 #include "VKRenderIndexBuffer.h"
 #include "VKRenderVertexBuffer.h"
+#include "VKRenderUniformBuffer.h"
 
 #include "VKRenderPipeline.h"
 #include "VKRenderShader.h"
