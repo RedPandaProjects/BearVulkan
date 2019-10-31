@@ -235,10 +235,13 @@ VKRenderPipeline::VKRenderPipeline(const BearGraphics::BearRenderPipelineDescrip
 			CountShader++;
 		}
 	}
+	RootSignature = desc.RootSignature;
+	RootSignaturePointer = static_cast<VKRenderRootSignature*>(RootSignature.get());
+
 	VkGraphicsPipelineCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	info.pNext = NULL;
-	info.layout = VK_NULL_HANDLE;
+	info.layout = RootSignaturePointer->PipelineLayout;
 	info.basePipelineHandle = VK_NULL_HANDLE;
 	info.basePipelineIndex = 0;
 	info.flags = 0;
@@ -254,7 +257,6 @@ VKRenderPipeline::VKRenderPipeline(const BearGraphics::BearRenderPipelineDescrip
 	info.pStages = ShaderStage;
 	info.stageCount = static_cast<uint32>(CountShader); ; ;
 	info.subpass = 0;
-
 	V_CHK(vkCreateGraphicsPipelines(Factory->Device, Factory->PipelineCacheDefault, 1, &info, NULL, &Pipeline));
 }
 

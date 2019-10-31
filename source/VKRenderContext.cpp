@@ -161,6 +161,7 @@ void VKRenderContext::SetPipeline(BearGraphics::BearFactoryPointer<BearRenderBas
 	if (m_Status != 1|| Pipeline.get()==0)return;
 
 	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VKRenderPipeline*>(Pipeline.get())->Pipeline);
+	static_cast<VKRenderPipeline*>(Pipeline.get())->RootSignaturePointer->Set(CommandBuffer);
 }
 
 void VKRenderContext::SetVertexBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderVertexBufferBase> buffer)

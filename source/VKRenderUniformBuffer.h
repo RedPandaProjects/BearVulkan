@@ -9,7 +9,7 @@ public:
 	virtual void Unlock();
 	virtual void Clear();
 	VkBuffer Buffer;
-
+	VkDescriptorBufferInfo BufferInfo;
 private:
 	VkDeviceMemory Memory;
 	bool m_dynamic;

@@ -239,7 +239,7 @@ BearRenderBase::BearRenderUniformBufferBase * VKRenderFactory::CreateUniformBuff
 
 BearRenderBase::BearRenderRootSignatureBase * VKRenderFactory::CreateRootSignature(const BearGraphics::BearRenderRootSignatureDescription & Descruotion)
 {
-	return nullptr;
+	return bear_new<VKRenderRootSignature>(Descruotion); ;
 }
 
 void VKRenderFactory::LockCommandBuffer()
