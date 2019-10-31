@@ -237,6 +237,11 @@ BearRenderBase::BearRenderUniformBufferBase * VKRenderFactory::CreateUniformBuff
 	return bear_new<VKRenderUniformBuffer>();
 }
 
+BearRenderBase::BearRenderRootSignatureBase * VKRenderFactory::CreateRootSignature(const BearGraphics::BearRenderRootSignatureDescription & Descruotion)
+{
+	return nullptr;
+}
+
 void VKRenderFactory::LockCommandBuffer()
 {
 	m_CommandMutex.Lock();
