@@ -73,7 +73,6 @@ void VKRenderVertexBuffer::Unlock()
 	if (m_dynamic)
 	{
 		vkUnmapMemory(Factory->Device, Memory);
-		V_CHK(vkBindBufferMemory(Factory->Device, Buffer, Memory, 0));
 	}
 	else if (m_buffer)
 	{
@@ -85,7 +84,6 @@ void VKRenderVertexBuffer::Unlock()
 			V_CHK(vkMapMemory(Factory->Device, MemoryTemp, 0, m_size, 0, (void **)&pData));
 			bear_copy(pData, m_buffer, m_size);
 			vkUnmapMemory(Factory->Device, MemoryTemp);
-			V_CHK(vkBindBufferMemory(Factory->Device, BufferTemp, MemoryTemp, 0));
 		}
 		CopyBuffer(BufferTemp, Buffer, m_size);
 		vkDestroyBuffer(Factory->Device, BufferTemp, 0);

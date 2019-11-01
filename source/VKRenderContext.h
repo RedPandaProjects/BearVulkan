@@ -18,6 +18,7 @@ public:
 	virtual void SetScissor(bool Enable, float x, float y, float x1, float y1);
 	virtual void Draw(bsize count, bsize offset = 0);
 	virtual void DrawIndex(bsize count, bsize offset = 0);
+	virtual void SetRootSignature(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderRootSignatureBase> RootSignature);
 private:
 	void PreDestroy();
 	int UpdateStatus();

@@ -33,7 +33,7 @@ inline void CreateBuffer(VkPhysicalDevice physicalDevice,VkDevice device, VkDevi
 
 	V_CHK(vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory));
 
-	vkBindBufferMemory(device, buffer, bufferMemory, 0);
+	V_CHK(vkBindBufferMemory(device, buffer, bufferMemory, 0));
 }
 
 inline void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)

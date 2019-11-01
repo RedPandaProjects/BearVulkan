@@ -26,6 +26,7 @@ public:
 	VkQueue Queue;
 #ifdef DEBUG
 	VkDebugUtilsMessengerEXT DebugMessenger;
+#endif
 public:
 	VkCommandBuffer CommandBuffer;
 	void LockCommandBuffer();
@@ -34,5 +35,5 @@ private:
 	BearMutex m_CommandMutex;
 	VkCommandPool m_CommandPool;
 
-#endif
+
 };
