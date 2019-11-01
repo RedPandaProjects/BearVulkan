@@ -20,7 +20,7 @@ VKRenderRootSignature::VKRenderRootSignature(const BearGraphics::BearRenderRootS
 {
 	bsize CountBuffers = 0;
 	{
-		for (; CountBuffers < 16 && !Description.UniformBuffers[CountBuffers].Buffer.empty(); CountBuffers++);
+		//for (; CountBuffers < 16 && !Description.UniformBuffers[CountBuffers].Buffer.empty(); CountBuffers++);
 	}
 	bsize Count = CountBuffers;
 	{
@@ -90,7 +90,7 @@ VKRenderRootSignature::VKRenderRootSignature(const BearGraphics::BearRenderRootS
 		bsize Offset = 0;
 		for (bsize i = 0; i < CountBuffers; i++)
 		{
-			auto *buffer = static_cast<const VKRenderUniformBuffer*>(Description.UniformBuffers[i].Buffer.get());
+			/*auto *buffer = static_cast<const VKRenderUniformBuffer*>(Description.UniformBuffers[i].Buffer.get());
 			WriteDescriptorSet[i + Offset] = {};
 			WriteDescriptorSet[i + Offset].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			WriteDescriptorSet[i + Offset].pNext = NULL;
@@ -99,7 +99,7 @@ VKRenderRootSignature::VKRenderRootSignature(const BearGraphics::BearRenderRootS
 			WriteDescriptorSet[i + Offset].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			WriteDescriptorSet[i + Offset].pBufferInfo = &buffer->BufferInfo;
 			WriteDescriptorSet[i + Offset].dstArrayElement = 0;
-			WriteDescriptorSet[i + Offset].dstBinding = static_cast<uint32_t>(i);
+			WriteDescriptorSet[i + Offset].dstBinding = static_cast<uint32_t>(i);*/
 		}
 		Offset += CountBuffers;
 

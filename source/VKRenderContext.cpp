@@ -227,11 +227,15 @@ void VKRenderContext::DrawIndex(bsize count, bsize offset)
 	vkCmdDrawIndexed(CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset), 0,0);
 }
 
+void VKRenderContext::SetDescriptorHeap(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderDescriptorHeapBase> DescriptorHeap)
+{
+}
+/*
 void VKRenderContext::SetRootSignature(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderRootSignatureBase> RootSignature)
 {
 	if (m_Status != 1 || RootSignature.empty())return;
 	static_cast<VKRenderRootSignature*>(RootSignature.get())->Set(CommandBuffer);
-}
+}*/
 
 void VKRenderContext::PreDestroy()
 {

@@ -242,6 +242,11 @@ BearRenderBase::BearRenderRootSignatureBase * VKRenderFactory::CreateRootSignatu
 	return bear_new<VKRenderRootSignature>(Descruotion); ;
 }
 
+BearRenderBase::BearRenderDescriptorHeapBase * VKRenderFactory::CreateDescriptorHeap(const BearGraphics::BearRenderDescriptorHeapDescription & Description)
+{
+	return nullptr;
+}
+
 void VKRenderFactory::LockCommandBuffer()
 {
 	m_CommandMutex.Lock();
