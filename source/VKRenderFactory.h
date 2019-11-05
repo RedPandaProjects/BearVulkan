@@ -16,7 +16,8 @@ public:
 	virtual BearRenderBase::BearRenderUniformBufferBase* CreateUniformBuffer();
 	virtual BearRenderBase::BearRenderRootSignatureBase* CreateRootSignature(const BearGraphics::BearRenderRootSignatureDescription&Descruotion);
 	virtual BearRenderBase::BearRenderDescriptorHeapBase* CreateDescriptorHeap(const BearGraphics::BearRenderDescriptorHeapDescription&Description);
-
+	virtual BearRenderBase::BearRenderSamplerStateBase* CreateSamplerState( const BearGraphics::BearRenderSamplerDescription&Description);
+	virtual BearRenderBase::BearRenderTexture2DBase* CreateTexture2D();
 	inline bool Empty()const { return Instance==0; }
 public:
 	VkPipelineCache PipelineCacheDefault;

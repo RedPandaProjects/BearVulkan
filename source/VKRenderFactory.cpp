@@ -247,6 +247,16 @@ BearRenderBase::BearRenderDescriptorHeapBase * VKRenderFactory::CreateDescriptor
 	return nullptr;
 }
 
+BearRenderBase::BearRenderSamplerStateBase * VKRenderFactory::CreateSamplerState(const BearGraphics::BearRenderSamplerDescription & Description)
+{
+	return nullptr;
+}
+
+BearRenderBase::BearRenderTexture2DBase * VKRenderFactory::CreateTexture2D()
+{
+	return nullptr;
+}
+
 void VKRenderFactory::LockCommandBuffer()
 {
 	m_CommandMutex.Lock();
