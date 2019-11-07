@@ -9,6 +9,7 @@ public:
 	virtual void SetFullScreen(bool FullScreen);
 	virtual void Resize(bsize Width, bsize Height);
 	virtual void*GetHandle();
+	virtual void SetResource(void*);
 	void Swap();
 	
 	VkSemaphore Semaphore;

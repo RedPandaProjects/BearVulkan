@@ -126,6 +126,11 @@ void * VKRenderViewport::GetHandle()
 	return this;
 }
 
+void VKRenderViewport::SetResource(void *)
+{
+	BEAR_RASSERT(0);
+}
+
 void VKRenderViewport::Swap()
 {
 

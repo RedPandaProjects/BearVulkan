@@ -107,6 +107,10 @@ void VKRenderContext::AttachViewportAsFrameBuffer(BearGraphics::BearFactoryPoint
 
 }
 
+void VKRenderContext::AttachFrameBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderFrameBufferBase> Framebuffer)
+{
+}
+
 void VKRenderContext::DetachFrameBuffer()
 {
 	PreDestroy();

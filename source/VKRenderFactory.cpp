@@ -257,6 +257,23 @@ BearRenderBase::BearRenderTexture2DBase * VKRenderFactory::CreateTexture2D()
 	return nullptr;
 }
 
+BearRenderBase::BearRenderTexture2DUAVBase * VKRenderFactory::CreateTexture2DUAV()
+{
+	return nullptr;
+}
+
+BearRenderBase::BearRenderTargetViewBase * VKRenderFactory::CreateTargetView(const BearGraphics::BearRenderTargetViewDescription & Description)
+{
+	return nullptr;
+}
+
+BearRenderBase::BearRenderFrameBufferBase * VKRenderFactory::CreateFrameBuffer(const BearGraphics::BearRenderFrameBufferDescription & Description)
+{
+	return nullptr;
+}
+
+
+
 void VKRenderFactory::LockCommandBuffer()
 {
 	m_CommandMutex.Lock();

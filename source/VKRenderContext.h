@@ -8,6 +8,8 @@ public:
 	virtual void Wait();
 	virtual void Flush(bool wiat);
 	virtual void AttachViewportAsFrameBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderViewportBase> Viewport);
+	virtual void AttachFrameBuffer(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderFrameBufferBase> Framebuffer);
+
 	virtual void DetachFrameBuffer();
 	virtual void ClearFrameBuffer();
 

@@ -18,6 +18,11 @@ public:
 	virtual BearRenderBase::BearRenderDescriptorHeapBase* CreateDescriptorHeap(const BearGraphics::BearRenderDescriptorHeapDescription&Description);
 	virtual BearRenderBase::BearRenderSamplerStateBase* CreateSamplerState( const BearGraphics::BearRenderSamplerDescription&Description);
 	virtual BearRenderBase::BearRenderTexture2DBase* CreateTexture2D();
+	virtual BearRenderBase::BearRenderTexture2DUAVBase *CreateTexture2DUAV();
+
+	virtual BearRenderBase::BearRenderTargetViewBase *CreateTargetView(const BearGraphics::BearRenderTargetViewDescription&Description);
+	virtual BearRenderBase::BearRenderFrameBufferBase *CreateFrameBuffer(const BearGraphics::BearRenderFrameBufferDescription&Description);
+
 	inline bool Empty()const { return Instance==0; }
 public:
 	VkPipelineCache PipelineCacheDefault;
