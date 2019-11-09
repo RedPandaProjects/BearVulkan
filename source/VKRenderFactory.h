@@ -23,6 +23,10 @@ public:
 	virtual BearRenderBase::BearRenderTargetViewBase *CreateTargetView(const BearGraphics::BearRenderTargetViewDescription&Description);
 	virtual BearRenderBase::BearRenderFrameBufferBase *CreateFrameBuffer(const BearGraphics::BearRenderFrameBufferDescription&Description);
 
+
+	virtual BearRenderBase::BearRenderAccelerationStructuresBase *CreateAccelerationStructures(const BearGraphics::BearRenderAccelerationStructuresDescription&Description);
+	virtual  BearRenderBase::BearRenderPipelineBase*   CreatePipeline(const BearGraphics::BearRenderRTXPipelineDescription&Description);
+
 	inline bool Empty()const { return Instance==0; }
 public:
 	VkPipelineCache PipelineCacheDefault;

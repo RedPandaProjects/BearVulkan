@@ -272,6 +272,16 @@ BearRenderBase::BearRenderFrameBufferBase * VKRenderFactory::CreateFrameBuffer(c
 	return nullptr;
 }
 
+BearRenderBase::BearRenderAccelerationStructuresBase * VKRenderFactory::CreateAccelerationStructures(const BearGraphics::BearRenderAccelerationStructuresDescription & Description)
+{
+	return nullptr;
+}
+
+BearRenderBase::BearRenderPipelineBase * VKRenderFactory::CreatePipeline(const BearGraphics::BearRenderRTXPipelineDescription & Description)
+{
+	return nullptr;
+}
+
 
 
 void VKRenderFactory::LockCommandBuffer()
