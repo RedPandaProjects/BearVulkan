@@ -234,6 +234,9 @@ void VKRenderContext::DrawIndex(bsize count, bsize offset)
 void VKRenderContext::SetDescriptorHeap(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderDescriptorHeapBase> DescriptorHeap)
 {
 }
+void VKRenderContext::DispatchRays(const BearGraphics::BearRenderDispatchRaysDescription & Description)
+{
+}
 /*
 void VKRenderContext::SetRootSignature(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderRootSignatureBase> RootSignature)
 {

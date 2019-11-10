@@ -265,3 +265,7 @@ VKRenderPipeline::~VKRenderPipeline()
 	if (Pipeline)
 		vkDestroyPipeline(Factory->Device, Pipeline, 0);
 }
+
+void VKRenderPipeline::Set(void * cmdlist)
+{
+}

@@ -5,7 +5,7 @@ class VKRenderPipeline :public BearRenderBase::BearRenderPipelineBase
 public:
 	VKRenderPipeline(const BearGraphics::BearRenderPipelineDescription&desc);
 	virtual ~VKRenderPipeline();
-
+	virtual void Set(void*cmdlist);
 	VkPipeline Pipeline;
 	BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderRootSignatureBase> RootSignature;
 	VKRenderRootSignature *RootSignaturePointer;
