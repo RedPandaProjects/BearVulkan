@@ -22,7 +22,6 @@ public:
 	virtual void DrawIndex(bsize count, bsize offset = 0);
 	virtual void  SetDescriptorHeap(BearGraphics::BearFactoryPointer<BearRenderBase::BearRenderDescriptorHeapBase> DescriptorHeap);
 
-	virtual void DispatchRays(const BearGraphics::BearRenderDispatchRaysDescription&Description);
 private:
 	void PreDestroy();
 	int UpdateStatus();
