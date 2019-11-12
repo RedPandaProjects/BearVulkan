@@ -277,7 +277,7 @@ BearRenderBase::BearRenderAccelerationStructuresBase * VKRenderFactory::CreateAc
 	return nullptr;
 }
 
-BearRenderBase::BearRenderPipelineBase * VKRenderFactory::CreatePipeline(const BearGraphics::BearRenderRTXPipelineDescription & Description)
+BearRenderBase::BearRenderRTXPipelineBase * VKRenderFactory::CreateRTXPipeline(const BearGraphics::BearRenderRTXPipelineDescription & Description)
 {
 	return nullptr;
 }

@@ -25,7 +25,7 @@ public:
 
 
 	virtual BearRenderBase::BearRenderAccelerationStructuresBase *CreateAccelerationStructures(const BearGraphics::BearRenderAccelerationStructuresDescription&Description);
-	virtual  BearRenderBase::BearRenderPipelineBase*   CreatePipeline(const BearGraphics::BearRenderRTXPipelineDescription&Description);
+	virtual  BearRenderBase::BearRenderRTXPipelineBase*   CreateRTXPipeline(const BearGraphics::BearRenderRTXPipelineDescription&Description);
 
 	inline bool Empty()const { return Instance==0; }
 public:
