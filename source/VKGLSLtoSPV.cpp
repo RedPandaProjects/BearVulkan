@@ -1,5 +1,5 @@
 #include "vulkanPCH.h"
-
+/*
 inline void init_resources(TBuiltInResource &Resources) 
 {
 	Resources.maxLights = 32;
@@ -144,15 +144,20 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 	init_resources(Resources);
 
 	// Enable SPIR-V and Vulkan rules when parsing GLSL
-	EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+	EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules); 
 
 	shaderStrings[0] = pshader;
 	shader.setStrings(shaderStrings, 1);
 
 	if (!shader.parse(&Resources, 100, false, messages)) 
 	{
-		out.append(*(BearEncoding::ToCurrent(shader.getInfoLog()))).append(TEXT("\n")).append(*(BearEncoding::ToCurrent(shader.getInfoDebugLog())));
+#ifdef UNICODE
+		out.append(*(BearEncoding::FastToUnicode(shader.getInfoLog()))).append(TEXT("\n")).append(*(BearEncoding::FastToUnicode(shader.getInfoDebugLog())));
 		return false;  // something didn't work
+#else
+		out.append(*BearString(shader.getInfoLog()).append(TEXT("\n")).append(shader.getInfoDebugLog()));
+		return false;  // something didn't work
+#endif
 	}
 
 	program.addShader(&shader);
@@ -162,7 +167,13 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 	//
 
 	if (!program.link(messages)) {
-		out.append(*(BearEncoding::ToCurrent(shader.getInfoLog()))).append(TEXT("\n")).append(*(BearEncoding::ToCurrent(shader.getInfoDebugLog())));
+#ifdef UNICODE
+		out.append(*(BearEncoding::FastToUnicode(shader.getInfoLog()))).append(TEXT("\n")).append(*(BearEncoding::FastToUnicode(shader.getInfoDebugLog())));
+		return false;  // something didn't work
+#else
+		out.append(*BearString(shader.getInfoLog()).append(TEXT("\n")).append(shader.getInfoDebugLog()));
+		return false;  // something didn't work
+#endif
 		return false;
 	}
 
@@ -180,3 +191,4 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 #endif
 	return true;
 }
+*/

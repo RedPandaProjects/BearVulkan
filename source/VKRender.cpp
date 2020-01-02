@@ -1,26 +1,15 @@
 #include "vulkanPCH.h"
-#include "glslang/Public/ShaderLang.h"
-VKRenderFactory *Factory = 0;
-void RenderInitialize()
+VKFactory* Factory;
+bool RHIInitialize()
 {
-	Factory = BearCore::bear_new<VKRenderFactory>();
+	 Factory = bear_new<VKFactory>();
 	if (!Factory->Empty())
 	{
-		GRenderFactoty = Factory;
-		BEAR_ASSERT(GRenderFactoty);
-		glslang::InitializeProcess();
-		return;
+		GFactory = Factory;
+		BEAR_ASSERT(GFactory);
+		return true;
 	}
-	BearCore::bear_delete(Factory);
-	GRenderFactoty = 0;
-
-}
-void RenderDestroy()
-{
-	if (GRenderFactoty)
-	{
-		glslang::FinalizeProcess();
-		BearCore::bear_delete(Factory);
-		GRenderFactoty = 0;
-	}
+	bear_delete(Factory);
+	GFactory = 0;
+	return false;
 }
