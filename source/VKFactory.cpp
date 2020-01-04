@@ -175,3 +175,15 @@ BearRHI::BearRHIShader* VKFactory::CreateShader(BearShaderType Type)
 	return nullptr;
 }
 
+BearRHI::BearRHIVertexBuffer* VKFactory::CreateVertexBuffer(bsize stride, bsize count, bool dynamic)
+{
+	return nullptr;
+}
+
+BearRHI::BearRHIIndexBuffer* VKFactory::CreateIndexBuffer(bsize count, bool dynamic)
+{
+	return nullptr;
+}
+
+
+

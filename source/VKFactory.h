@@ -8,7 +8,8 @@ public:
 	virtual BearRHI::BearRHIContext* CreateContext();
 	virtual BearRHI::BearRHIViewport* CreateViewport( void* Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearRenderViewportDescription& Description);
 	virtual BearRHI::BearRHIShader* CreateShader(BearShaderType Type);
-
+	virtual BearRHI::BearRHIVertexBuffer* CreateVertexBuffer(bsize stride, bsize count, bool dynamic);
+	virtual BearRHI::BearRHIIndexBuffer* CreateIndexBuffer(bsize count, bool dynamic);
 
 
 	inline bool Empty()const { return Instance==0; }

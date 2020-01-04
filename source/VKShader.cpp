@@ -44,7 +44,7 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearString, BearStrin
 #ifdef DEBUG
 	shaderc_compile_options_set_generate_debug_info(options);
 #endif
-	shaderc_shader_kind shader_kind;
+	shaderc_shader_kind shader_kind = shaderc_shader_kind::shaderc_vertex_shader;
 	switch (Type)
 	{
 	case ST_Vertex:
@@ -67,8 +67,9 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearString, BearStrin
 #endif
 	}
 #ifdef UNICODE
-	shaderc_compilation_result_t result = shaderc_compile_into_spv( compiler, "#version 450\nvoid main() {}", 27, shader_kind, "main.vert", "main", options);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler,*BearEncoding::FastToAnsi( Text), 27, shader_kind, "noname", "main", options);
 #else
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, Text, 27, shader_kind, "noname", "main", options);
 #endif
 	shaderc_compile_options_release(options);
 	shaderc_result_release(result);
