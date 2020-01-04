@@ -7,7 +7,7 @@ public:
 	virtual ~VKFactory();
 	virtual BearRHI::BearRHIContext* CreateContext();
 	virtual BearRHI::BearRHIViewport* CreateViewport( void* Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearRenderViewportDescription& Description);
-
+	virtual BearRHI::BearRHIShader* CreateShader(BearShaderType Type);
 
 
 

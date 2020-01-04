@@ -1,4 +1,4 @@
-#include "vulkanPCH.h"
+#include "VKPCH.h"
 static const char* InstanceExtensions[] =
 {
 #ifdef DEBUG
@@ -168,5 +168,10 @@ BearRHI::BearRHIContext* VKFactory::CreateContext()
 BearRHI::BearRHIViewport* VKFactory::CreateViewport(void* Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearRenderViewportDescription& Description)
 {
 	return bear_new<VKViewport>(Handle, Width, Height, Fullscreen, VSync, Description);
+}
+
+BearRHI::BearRHIShader* VKFactory::CreateShader(BearShaderType Type)
+{
+	return nullptr;
 }
 
