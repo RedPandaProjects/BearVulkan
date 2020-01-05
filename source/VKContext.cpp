@@ -173,6 +173,75 @@ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearF
 	if (static_cast<VKVertexBuffer*>(Src.get())->Buffer == nullptr)return;
 	CopyBuffer(CommandBuffer, static_cast<VKVertexBuffer*>(Dst.get())->Buffer, static_cast<VKVertexBuffer*>(Src.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Size);
 }
+void VKContext::SetPipeline(BearFactoryPointer<BearRHI::BearRHIPipeline> Pipeline)
+{
+	if (m_Status != 1 || Pipeline.get() == 0)return;
+
+	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VKPipeline*>(Pipeline.get())->Pipeline);
+	
+
+}
+void VKContext::SetVertexBuffer(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> buffer)
+{
+	if (m_Status != 1 || buffer.get() == 0)return;
+	VkDeviceSize offset = 0;
+	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &static_cast<VKVertexBuffer*>(buffer.get())->Buffer, &offset);
+
+}
+void VKContext::SetIndexBuffer(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> buffer)
+{
+	if (m_Status != 1 || buffer.get() == 0)return;
+	vkCmdBindIndexBuffer(CommandBuffer, static_cast<VKIndexBuffer*>(buffer.get())->Buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+
+}
+void VKContext::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
+{
+	Viewport.x = x;
+	Viewport.y = height - y;
+	Viewport.width = width;
+	Viewport.height = -height;
+	Viewport.maxDepth = maxDepth;
+	Viewport.minDepth = minDepth;
+	if (m_Status == 1)
+	{
+
+		vkCmdSetViewport(CommandBuffer, 0, 1, &Viewport);
+
+		if (!ScissorEnable)
+		{
+			Scissor.offset.x = static_cast<int32>(Viewport.x);
+			Scissor.offset.y = static_cast<int32>(Viewport.y);
+			Scissor.extent.width = static_cast<uint32>(Viewport.width);
+			Scissor.extent.height = static_cast<uint32>(Viewport.height);
+		}
+		vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
+	}
+}
+void VKContext::SetScissor(bool Enable, float x, float y, float x1, float y1)
+{
+	ScissorEnable = Enable;
+	Scissor.offset.x = static_cast<int32>(x);
+	Scissor.offset.y = static_cast<int32>(x);;
+	Scissor.extent.width = static_cast<uint32>(x1);
+	Scissor.extent.height = static_cast<uint32>(y1);
+	if (m_Status != 1)return;
+	if (ScissorEnable)
+	{
+		vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
+	}
+}
+void VKContext::Draw(bsize count, bsize offset)
+{
+	if (m_Status != 1)return;
+	vkCmdDraw(CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset), 0);
+
+}
+void VKContext::DrawIndex(bsize count, bsize  offset_index, bsize offset_vertex)
+{
+	if (m_Status != 1)return;
+	vkCmdDrawIndexed(CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset_index), static_cast<uint32>(offset_vertex), 0);
+
+}
 void VKContext::PreDestroy()
 {
 	if (m_Status == 1)Flush(true);

@@ -11,8 +11,10 @@ public:
 	virtual	bsize GetSize();
 #endif
 	virtual	void LoadAsBinary(void* data, bsize size);
-	BearMemoryStream ShaderOnMemory;
+	BearVector<uint32> ShaderOnMemory;
 	inline bool IsType(BearShaderType type)const { return Type == type; }
+	VkPipelineShaderStageCreateInfo Shader;
 private:
+	void CreateShader();
 	BearShaderType Type;
 };

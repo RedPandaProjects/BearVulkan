@@ -2,10 +2,12 @@
 
 VKShader::VKShader(BearShaderType type):Type(type)
 {
+	Shader.module = 0;
 }
 
 VKShader::~VKShader()
 {
+	if (Shader.module)vkDestroyShaderModule(Factory->Device, Shader.module, 0);
 }
 
 #ifdef DEVELOPER_VERSION
@@ -36,6 +38,15 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearString, BearStrin
 	shaderc_compiler_t compiler = shaderc_compiler_initialize();
 	shaderc_compile_options_t options = shaderc_compile_options_initialize();
 	shaderc_compile_options_set_source_language(options, shaderc_source_language_hlsl);
+
+#ifdef VK_11
+	shaderc_compile_options_set_target_env(options, shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
+	shaderc_compile_options_set_target_spirv(options, shaderc_spirv_version_1_3);
+#else
+	shaderc_compile_options_set_target_env(options, shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
+	shaderc_compile_options_set_target_spirv(options, shaderc_spirv_version_1_0);
+#endif
+	shaderc_compile_options_set_forced_version_profile(options, 450, shaderc_profile_core);
 #ifdef _DEBUG
 	shaderc_compile_options_set_optimization_level(options, shaderc_optimization_level_zero);
 #else
@@ -56,7 +67,7 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearString, BearStrin
 	default:
 		break;
 	};
-	shaderc_compile_options_set_include_callbacks(options, &CallbackIncluder,&CallbackInclduerRelease,reinterpret_cast<void*>(Includer));
+	shaderc_compile_options_set_include_callbacks(options, &CallbackIncluder, &CallbackInclduerRelease, reinterpret_cast<void*>(Includer));
 	for (auto b = Defines.begin(), e = Defines.end(); b != e; b++)
 	{
 #ifdef UNICODE
@@ -67,28 +78,96 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearString, BearStrin
 #endif
 	}
 #ifdef UNICODE
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler,*BearEncoding::FastToAnsi( Text), 27, shader_kind, "noname", "main", options);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(Text), BearString::GetSize(Text), shader_kind, "noname", "main", options);
 #else
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, Text, 27, shader_kind, "noname", "main", options);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, Text, BearString::GetSize(Text), shader_kind, "noname", "main", options);
 #endif
+
+	if (shaderc_result_get_num_errors(result))
+	{
+		const char* text = shaderc_result_get_error_message(result);
+#ifdef UNICODE
+		OutError = BearEncoding::FastToUnicode(text);
+#else
+		OutError = text;
+#endif
+		shaderc_compile_options_release(options);
+		shaderc_result_release(result);
+		shaderc_compiler_release(compiler);
+		return false;
+	}
+	BEAR_RASSERT(shaderc_result_get_compilation_status(result) == shaderc_compilation_status_success);
+	if (shaderc_result_get_num_warnings(result))
+	{
+		const char* text = shaderc_result_get_error_message(result);
+#ifdef UNICODE
+		OutError = BearEncoding::FastToUnicode(text);
+#else
+		OutError = text;
+#endif
+	}
+
+	ShaderOnMemory.clear();
+
+	ShaderOnMemory.resize(shaderc_result_get_length(result)/4);
+	bear_copy(ShaderOnMemory.data(), shaderc_result_get_bytes(result), shaderc_result_get_length(result));
+	BEAR_ASSERT(shaderc_result_get_length(result) % 4 == 0)
 	shaderc_compile_options_release(options);
 	shaderc_result_release(result);
 	shaderc_compiler_release(compiler);
-	return false;
+	CreateShader();
+	return true;
 }
 
 void* VKShader::GetPointer()
 {
-	return ShaderOnMemory.Begin();
+	return ShaderOnMemory.data();
 }
 
 bsize VKShader::GetSize()
 {
-	return ShaderOnMemory.Size();
+	return ShaderOnMemory.size()*4;
 }
 #endif
 void VKShader::LoadAsBinary(void* data, bsize size)
 {
-	ShaderOnMemory.Clear();
-	ShaderOnMemory.WriteBuffer(data, size);
+	if (size == 0)return;
+	ShaderOnMemory.clear();
+	BEAR_ASSERT(size % 4 == 0)
+	ShaderOnMemory.resize( size/4);
+	bear_copy(ShaderOnMemory.data(), data, size);
+	CreateShader();
+}
+
+void VKShader::CreateShader()
+{
+	if (ShaderOnMemory.size() == 0)return;
+	if (Shader.module)vkDestroyShaderModule(Factory->Device, Shader.module, 0);
+	Shader.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	Shader.pNext = NULL;
+	Shader.pSpecializationInfo = NULL;
+	Shader.flags = 0;
+	switch (Type)
+	{
+	case ST_Vertex:
+		Shader.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		break;
+	case ST_Pixel:
+		Shader.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		break;
+	default:
+		Shader.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		break;
+	}
+
+	Shader.pName = "main";
+
+	VkShaderModuleCreateInfo moduleCreateInfo;
+	moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	moduleCreateInfo.pNext = NULL;
+	moduleCreateInfo.flags = 0;
+	moduleCreateInfo.codeSize = ShaderOnMemory.size()*sizeof(uint32);
+	moduleCreateInfo.pCode = (uint32*)ShaderOnMemory.data();
+	V_CHK(vkCreateShaderModule(Factory->Device, &moduleCreateInfo, NULL, &Shader.module));
+
 }

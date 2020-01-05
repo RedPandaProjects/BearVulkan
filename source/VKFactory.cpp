@@ -38,7 +38,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 }
 #endif
 
-VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0)
+VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0), PipelineLayout(0)
 {
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -144,6 +144,26 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 		V_CHK(CreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
 #endif
 		vkGetDeviceQueue(Device, QueueFamilyIndex, 0, &Queue);
+		{
+			VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {};
+			PipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+			PipelineLayoutCreateInfo.pNext = NULL;
+			PipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+			PipelineLayoutCreateInfo.pPushConstantRanges = NULL;
+			PipelineLayoutCreateInfo.setLayoutCount = 0;
+			PipelineLayoutCreateInfo.pSetLayouts = 0;
+
+			V_CHK(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, NULL, &PipelineLayout));
+		}
+		{
+			VkPipelineCacheCreateInfo PipelineCache;
+			PipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+			PipelineCache.pNext = NULL;
+			PipelineCache.initialDataSize = 0;
+			PipelineCache.pInitialData = NULL;
+			PipelineCache.flags = 0;
+			V_CHK(vkCreatePipelineCache(Device, &PipelineCache, 0, &PipelineCacheDefault));
+		}
 	}
 }
 
@@ -152,12 +172,14 @@ VKFactory::~VKFactory()
 #ifdef DEBUG 
 	DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
 #endif
+	if (PipelineLayout)vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
 	if (PipelineCacheDefault)
-		vkDestroyPipelineCache(Device, PipelineCacheDefault, 0);
+		vkDestroyPipelineCache(Device, PipelineCacheDefault, nullptr);
 	if (Device)
-		vkDestroyDevice(Device, NULL);
+		vkDestroyDevice(Device, nullptr);
 	if (Instance)
-		vkDestroyInstance(Instance, NULL);
+		vkDestroyInstance(Instance, nullptr);
+
 }
 
 BearRHI::BearRHIContext* VKFactory::CreateContext()
@@ -165,7 +187,7 @@ BearRHI::BearRHIContext* VKFactory::CreateContext()
 	return bear_new<VKContext>();
 }
 
-BearRHI::BearRHIViewport* VKFactory::CreateViewport(void* Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearRenderViewportDescription& Description)
+BearRHI::BearRHIViewport* VKFactory::CreateViewport(void* Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearViewportDescription& Description)
 {
 	return bear_new<VKViewport>(Handle, Width, Height, Fullscreen, VSync, Description);
 }
@@ -183,5 +205,10 @@ BearRHI::BearRHIVertexBuffer* VKFactory::CreateVertexBuffer()
 BearRHI::BearRHIIndexBuffer* VKFactory::CreateIndexBuffer()
 {
 	return bear_new<VKIndexBuffer>();
+}
+
+BearRHI::BearRHIPipeline* VKFactory::CreatePipeline(const BearPipelineDescription& Description)
+{
+	return bear_new<VKPipeline>(Description);
 }
 

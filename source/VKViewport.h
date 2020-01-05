@@ -3,7 +3,7 @@ class VKViewport :public BearRHI::BearRHIViewport
 {
 public:
 	BEAR_CLASS_WITHOUT_COPY(VKViewport);
-	VKViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearRenderViewportDescription&Description);
+	VKViewport(void * Handle, bsize Width, bsize Height, bool Fullscreen, bool VSync, const BearViewportDescription&Description);
 	virtual ~VKViewport();
 	virtual void SetVSync(bool Sync);
 	virtual void SetFullScreen(bool FullScreen);
@@ -30,7 +30,7 @@ public:
 	VkRenderPassBeginInfo GetRenderPass();
 	VkFence PresentFence;
 private:
-	BearRenderViewportDescription Description;
+	BearViewportDescription Description;
 	uint32_t m_PresentQueueFamilyIndex;
 	struct SwapChainSupportDetails 
 	{

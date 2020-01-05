@@ -1,6 +1,6 @@
 #include "VKPCH.h"
 
-VKViewport::VKViewport(void * Handle, bsize Width_, bsize Height_, bool Fullscreen, bool VSync, const BearRenderViewportDescription&Description_):Width(Width_),Height(Height_), Description(Description_)
+VKViewport::VKViewport(void * Handle, bsize Width_, bsize Height_, bool Fullscreen, bool VSync, const BearViewportDescription&Description_):Width(Width_),Height(Height_), Description(Description_)
 {
 	
 	m_FullScreen = 0;
