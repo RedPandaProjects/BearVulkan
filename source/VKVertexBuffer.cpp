@@ -13,7 +13,7 @@ void VKVertexBuffer::Create(bsize Stride, bsize Count, bool Dynamic)
 	m_dynamic = Dynamic;
 
 	if (Dynamic)
-		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Count * Stride, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Buffer, Memory);
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Count * Stride, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Buffer, Memory);
 	else
 		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Count * Stride, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Buffer, Memory);
 	VertexDescription.binding = 0;

@@ -39,4 +39,6 @@ private:
 	VkRect2D Scissor;
 
 	bool ScissorEnable;
+private:
+	bool m_use_renderpass;
 };

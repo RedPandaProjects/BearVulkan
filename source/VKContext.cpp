@@ -41,7 +41,7 @@ VKContext::VKContext():m_Status(0)
 	Scissor.extent.width = 1;
 	Scissor.extent.width = 1;
 	ScissorEnable = false;
-
+	m_use_renderpass = false;
 }
 
 VKContext::~VKContext()
@@ -72,7 +72,9 @@ void VKContext::Flush(bool wait)
 	static VkPipelineStageFlags stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	if (m_Status != 1)
 		return;
+	if(m_use_renderpass)
 	vkCmdEndRenderPass(CommandBuffer);
+	m_use_renderpass = false;
 	V_CHK(vkEndCommandBuffer(CommandBuffer));
 
 	if (m_viewport.empty()==false)
@@ -91,7 +93,16 @@ void VKContext::Flush(bool wait)
 	}
 	else
 	{
-		BEAR_ASSERT(false);
+		VkSubmitInfo submit_info = {};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.waitSemaphoreCount = 1;
+		submit_info.pWaitSemaphores = &SemaphoreWait;
+		submit_info.signalSemaphoreCount = 0;
+		submit_info.pSignalSemaphores = 0;// &buf.acquire_semaphore;
+		submit_info.pWaitDstStageMask = 0;
+		submit_info.pCommandBuffers = &CommandBuffer;
+		submit_info.commandBufferCount = 1;
+		V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
 	}
 	m_Status = 2;
 	if (wait)Wait();
@@ -143,6 +154,7 @@ void VKContext::ClearFrameBuffer()
 	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
 	auto RpBegin = SwapChain->GetRenderPass();
 	vkCmdBeginRenderPass(CommandBuffer, &RpBegin, VK_SUBPASS_CONTENTS_INLINE);
+	m_use_renderpass = true;
 	{
 		vkCmdSetViewport(CommandBuffer, 0, 1, &Viewport);
 		if (!ScissorEnable)
@@ -163,15 +175,39 @@ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Dst, BearFa
 	if (Dst.empty() || Src.empty())return;
 	if (static_cast<VKIndexBuffer*>(Dst.get())->Buffer == nullptr)return;
 	if (static_cast<VKIndexBuffer*>(Src.get())->Buffer == nullptr)return;
-	CopyBuffer(CommandBuffer, static_cast<VKIndexBuffer*>(Dst.get())->Buffer, static_cast<VKIndexBuffer*>(Src.get())->Buffer, static_cast<VKIndexBuffer*>(Dst.get())->Size);
+	if (m_Status == 0)
+	{
+		VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+		{
+			CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		}
+		V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+
+	}
+
+	CopyBuffer(CommandBuffer, static_cast<VKIndexBuffer*>(Src.get())->Buffer, static_cast<VKIndexBuffer*>(Dst.get())->Buffer, static_cast<VKIndexBuffer*>(Dst.get())->Size);
+	m_Status = 1;
 }
 void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Src)
 {
 	if (m_Status == 2)return;
 	if (Dst.empty() || Src.empty())return;
 	if (static_cast<VKVertexBuffer*>(Dst.get())->Buffer == nullptr)return;
+
 	if (static_cast<VKVertexBuffer*>(Src.get())->Buffer == nullptr)return;
-	CopyBuffer(CommandBuffer, static_cast<VKVertexBuffer*>(Dst.get())->Buffer, static_cast<VKVertexBuffer*>(Src.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Size);
+	if (m_Status == 0)
+	{
+		VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+		{
+			CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		}
+		V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+
+	}
+	CopyBuffer(CommandBuffer, static_cast<VKVertexBuffer*>(Src.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Size);
+	m_Status = 1;
 }
 void VKContext::SetPipeline(BearFactoryPointer<BearRHI::BearRHIPipeline> Pipeline)
 {
