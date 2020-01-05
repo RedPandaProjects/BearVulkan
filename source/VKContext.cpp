@@ -157,6 +157,22 @@ void VKContext::ClearFrameBuffer()
 	}
 
 }
+void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Src)
+{
+	if (m_Status == 2)return;
+	if (Dst.empty() || Src.empty())return;
+	if (static_cast<VKIndexBuffer*>(Dst.get())->Buffer == nullptr)return;
+	if (static_cast<VKIndexBuffer*>(Src.get())->Buffer == nullptr)return;
+	CopyBuffer(CommandBuffer, static_cast<VKIndexBuffer*>(Dst.get())->Buffer, static_cast<VKIndexBuffer*>(Src.get())->Buffer, static_cast<VKIndexBuffer*>(Dst.get())->Size);
+}
+void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Src)
+{
+	if (m_Status == 2)return;
+	if (Dst.empty() || Src.empty())return;
+	if (static_cast<VKVertexBuffer*>(Dst.get())->Buffer == nullptr)return;
+	if (static_cast<VKVertexBuffer*>(Src.get())->Buffer == nullptr)return;
+	CopyBuffer(CommandBuffer, static_cast<VKVertexBuffer*>(Dst.get())->Buffer, static_cast<VKVertexBuffer*>(Src.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Size);
+}
 void VKContext::PreDestroy()
 {
 	if (m_Status == 1)Flush(true);

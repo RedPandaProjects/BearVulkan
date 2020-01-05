@@ -172,18 +172,16 @@ BearRHI::BearRHIViewport* VKFactory::CreateViewport(void* Handle, bsize Width, b
 
 BearRHI::BearRHIShader* VKFactory::CreateShader(BearShaderType Type)
 {
-	return nullptr;
+	return bear_new<VKShader>(Type);
 }
 
-BearRHI::BearRHIVertexBuffer* VKFactory::CreateVertexBuffer(bsize stride, bsize count, bool dynamic)
+BearRHI::BearRHIVertexBuffer* VKFactory::CreateVertexBuffer()
 {
-	return nullptr;
+	return bear_new<VKVertexBuffer>();
 }
 
-BearRHI::BearRHIIndexBuffer* VKFactory::CreateIndexBuffer(bsize count, bool dynamic)
+BearRHI::BearRHIIndexBuffer* VKFactory::CreateIndexBuffer()
 {
-	return nullptr;
+	return bear_new<VKIndexBuffer>();
 }
-
-
 

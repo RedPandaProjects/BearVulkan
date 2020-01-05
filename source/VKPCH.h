@@ -20,3 +20,6 @@ extern VKFactory* Factory;
 #include "VKViewport.h"
 #include "VKContext.h"
 #include "VKShader.h"
+#include "VKBufferTools.h"
+#include "VKVertexBuffer.h"
+#include "VKIndexBuffer.h"

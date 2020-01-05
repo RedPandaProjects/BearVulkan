@@ -13,7 +13,8 @@ public:
 	virtual void DetachFrameBuffer();
 	virtual void ClearFrameBuffer();
 
-
+	virtual void Copy(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Src);
+	virtual void Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Src);
 
 private:
 	void PreDestroy();
