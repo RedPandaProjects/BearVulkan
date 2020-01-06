@@ -23,4 +23,9 @@ extern VKFactory* Factory;
 #include "VKBufferTools.h"
 #include "VKVertexBuffer.h"
 #include "VKIndexBuffer.h"
+
+#include "VKUniformBuffer.h"
+
+#include "VKRootSignature.h"
 #include "VKPipeline.h"
+#include "VKDescriptorHeap.h"

@@ -212,3 +212,18 @@ BearRHI::BearRHIPipeline* VKFactory::CreatePipeline(const BearPipelineDescriptio
 	return bear_new<VKPipeline>(Description);
 }
 
+BearRHI::BearRHIUniformBuffer* VKFactory::CreateUniformBuffer()
+{
+	return bear_new<VKUniformBuffer>();
+}
+
+BearRHI::BearRHIRootSignature* VKFactory::CreateRootSignature(const BearRootSignatureDescription& Description)
+{
+	return bear_new<VKRootSignature>(Description);
+}
+
+BearRHI::BearRHIDescriptorHeap* VKFactory::CreateDescriptorHeap(const BearDescriptorHeapDescription& Description)
+{
+	return bear_new<VKDescriptorHeap>(Description);
+}
+

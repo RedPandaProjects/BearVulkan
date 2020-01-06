@@ -235,11 +235,13 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 			CountShader++;
 		}
 	}
-
+	RootSignature = desc.RootSignature;
+	BEAR_ASSERT(RootSignature.empty() == false);
+	RootSignaturePointer = static_cast<VKRootSignature*>(RootSignature.get());
 	VkGraphicsPipelineCreateInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	info.pNext = NULL;
-	info.layout = Factory->PipelineLayout;// RootSignaturePointer->PipelineLayout;
+	info.layout = RootSignaturePointer->PipelineLayout;// RootSignaturePointer->PipelineLayout;
 	info.basePipelineHandle = VK_NULL_HANDLE;
 	info.basePipelineIndex = 0;
 	info.flags = 0;

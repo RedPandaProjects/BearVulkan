@@ -6,5 +6,6 @@ public:
 	VKPipeline(const BearPipelineDescription&desc);
 	virtual ~VKPipeline();
 	VkPipeline Pipeline;
-
+	BearFactoryPointer<BearRHI::BearRHIRootSignature> RootSignature;
+	VKRootSignature* RootSignaturePointer;
 };

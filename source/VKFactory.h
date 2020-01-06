@@ -11,7 +11,9 @@ public:
 	virtual BearRHI::BearRHIVertexBuffer* CreateVertexBuffer();
 	virtual BearRHI::BearRHIIndexBuffer* CreateIndexBuffer();
 	virtual BearRHI::BearRHIPipeline* CreatePipeline(const BearPipelineDescription& Description);
-
+	virtual BearRHI::BearRHIUniformBuffer* CreateUniformBuffer();
+	virtual BearRHI::BearRHIRootSignature* CreateRootSignature(const BearRootSignatureDescription& Description);
+	virtual BearRHI::BearRHIDescriptorHeap* CreateDescriptorHeap(const BearDescriptorHeapDescription& Description);
 	inline bool Empty()const { return Instance==0; }
 public:
 	VkPipelineCache PipelineCacheDefault;

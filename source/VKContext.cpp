@@ -209,6 +209,33 @@ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearF
 	CopyBuffer(CommandBuffer, static_cast<VKVertexBuffer*>(Src.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Size);
 	m_Status = 1;
 }
+
+void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Src)
+{
+	if (m_Status == 2)return;
+	if (Dst.empty() || Src.empty())return;
+	if (static_cast<VKUniformBuffer*>(Dst.get())->Buffer == nullptr)return;
+
+	if (static_cast<VKUniformBuffer*>(Src.get())->Buffer == nullptr)return;
+	if (m_Status == 0)
+	{
+		VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+		{
+			CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		}
+		V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+
+	}
+	CopyBuffer(CommandBuffer, static_cast<VKUniformBuffer*>(Src.get())->Buffer, static_cast<VKUniformBuffer*>(Dst.get())->Buffer, static_cast<VKUniformBuffer*>(Dst.get())->Size);
+	m_Status = 1;
+}
+void VKContext::SetDescriptorHeap(BearFactoryPointer<BearRHI::BearRHIDescriptorHeap> DescriptorHeap)
+{
+	if (m_Status != 1 || DescriptorHeap.get() == 0)return;
+
+	static_cast<VKDescriptorHeap*>(DescriptorHeap.get())->Set(CommandBuffer);
+}
 void VKContext::SetPipeline(BearFactoryPointer<BearRHI::BearRHIPipeline> Pipeline)
 {
 	if (m_Status != 1 || Pipeline.get() == 0)return;
