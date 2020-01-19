@@ -163,11 +163,11 @@ VkRenderPassBeginInfo VKViewport::GetRenderPass()
 	rp_begin.renderArea.extent.width = static_cast<uint32_t>( Width);
 	rp_begin.renderArea.extent.height = static_cast<uint32_t>(Height);
 	rp_begin.clearValueCount = 1;
-	m_ÑlearValues[0].color.float32[0] = ClearColor.R32F;
-	m_ÑlearValues[0].color.float32[1] = ClearColor.G32F;
-	m_ÑlearValues[0].color.float32[2] = ClearColor.B32F;
-	m_ÑlearValues[0].color.float32[3] = ClearColor.A32F;
-	rp_begin.pClearValues = m_ÑlearValues;
+	m_ClearValues[0].color.float32[0] = ClearColor.R32F;
+	m_ClearValues[0].color.float32[1] = ClearColor.G32F;
+	m_ClearValues[0].color.float32[2] = ClearColor.B32F;
+	m_ClearValues[0].color.float32[3] = ClearColor.A32F;
+	rp_begin.pClearValues = m_ClearValues;
 	return rp_begin;
 }
 
@@ -227,8 +227,8 @@ VkExtent2D VKViewport::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR & capabil
 	else {
 		VkExtent2D actualExtent = {static_cast<uint32_t>( width),static_cast<uint32_t>(height) };
 
-		actualExtent.width = max(capabilities.minImageExtent.width, min(capabilities.maxImageExtent.width, actualExtent.width));
-		actualExtent.height = max(capabilities.minImageExtent.height,min(capabilities.maxImageExtent.height, actualExtent.height));
+		actualExtent.width = BearMath::max(capabilities.minImageExtent.width, BearMath::min(capabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = BearMath::max(capabilities.minImageExtent.height,BearMath::min(capabilities.maxImageExtent.height, actualExtent.height));
 
 		return actualExtent;
 	}
@@ -266,7 +266,7 @@ uint32_t VKViewport::FindQueueFamilies()
 
 	}
 
-	BEAR_ERRORMESSAGE(result >= 0, TEXT("Íåóäàëîñü èíèöèàëèçèðîâàòü vulkan äëÿ äàííîãî îêíà!!!"));
+	BEAR_ERRORMESSAGE(result >= 0, TEXT("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ vulkan ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½!!!"));
 	return static_cast<uint32_t>( result);
 }
 

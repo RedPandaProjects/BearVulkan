@@ -38,7 +38,7 @@ private:
 		BearVector<VkSurfaceFormatKHR> formats;
 		BearVector<VkPresentModeKHR> presentModes;
 	};
-	VkClearValue m_ÑlearValues[1];
+	VkClearValue m_ClearValues[1];
 	SwapChainSupportDetails QuerySwapChainSupport();
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const BearVector<VkSurfaceFormatKHR>& availableFormats);
 	VkPresentModeKHR ChooseSwapPresentMode(const BearVector<VkPresentModeKHR>& availablePresentModes,bool vsync);

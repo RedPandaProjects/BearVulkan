@@ -173,8 +173,8 @@ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Dst, BearFa
 {
 	if (m_Status == 2)return;
 	if (Dst.empty() || Src.empty())return;
-	if (static_cast<VKIndexBuffer*>(Dst.get())->Buffer == nullptr)return;
-	if (static_cast<VKIndexBuffer*>(Src.get())->Buffer == nullptr)return;
+	if (static_cast<VKIndexBuffer*>(Dst.get())->Buffer == 0)return;
+	if (static_cast<VKIndexBuffer*>(Src.get())->Buffer == 0)return;
 	if (m_Status == 0)
 	{
 		VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
@@ -193,9 +193,9 @@ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearF
 {
 	if (m_Status == 2)return;
 	if (Dst.empty() || Src.empty())return;
-	if (static_cast<VKVertexBuffer*>(Dst.get())->Buffer == nullptr)return;
+	if (static_cast<VKVertexBuffer*>(Dst.get())->Buffer == 0)return;
 
-	if (static_cast<VKVertexBuffer*>(Src.get())->Buffer == nullptr)return;
+	if (static_cast<VKVertexBuffer*>(Src.get())->Buffer == 0)return;
 	if (m_Status == 0)
 	{
 		VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
@@ -214,9 +214,9 @@ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Dst, Bear
 {
 	if (m_Status == 2)return;
 	if (Dst.empty() || Src.empty())return;
-	if (static_cast<VKUniformBuffer*>(Dst.get())->Buffer == nullptr)return;
+	if (static_cast<VKUniformBuffer*>(Dst.get())->Buffer == 0)return;
 
-	if (static_cast<VKUniformBuffer*>(Src.get())->Buffer == nullptr)return;
+	if (static_cast<VKUniformBuffer*>(Src.get())->Buffer == 0)return;
 	if (m_Status == 0)
 	{
 		VkCommandBufferBeginInfo CommandBufferBeginInfo = {};

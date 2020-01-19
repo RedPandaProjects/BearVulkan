@@ -14,16 +14,20 @@ public:
 	virtual BearRHI::BearRHIUniformBuffer* CreateUniformBuffer();
 	virtual BearRHI::BearRHIRootSignature* CreateRootSignature(const BearRootSignatureDescription& Description);
 	virtual BearRHI::BearRHIDescriptorHeap* CreateDescriptorHeap(const BearDescriptorHeapDescription& Description);
+	virtual BearRHI::BearRHITexture2D* CreateTexture2D(bsize Width, bsize Height, bsize Mips, bsize Count, BearTexturePixelFormat PixelFormat, void* data = 0);
+	virtual BearRHI::BearRHISampler* CreateSampler();
 	inline bool Empty()const { return Instance==0; }
 public:
-	VkPipelineCache PipelineCacheDefault;
+
 	VkInstance Instance;
 	VkPhysicalDevice PhysicalDevice;
-	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkDevice Device;
+	VkPipelineCache PipelineCacheDefault;
+	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+	VkPipelineLayout PipelineLayout;
 	uint32_t QueueFamilyIndex;
 	VkQueue Queue;
-	VkPipelineLayout PipelineLayout;
+	
 #ifdef DEBUG
 	VkDebugUtilsMessengerEXT DebugMessenger;
 #endif

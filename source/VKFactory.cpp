@@ -227,3 +227,13 @@ BearRHI::BearRHIDescriptorHeap* VKFactory::CreateDescriptorHeap(const BearDescri
 	return bear_new<VKDescriptorHeap>(Description);
 }
 
+BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(bsize Width, bsize Height, bsize Mips, bsize Count, BearTexturePixelFormat PixelFormat, void* data)
+{
+	return nullptr;
+}
+
+BearRHI::BearRHISampler* VKFactory::CreateSampler()
+{
+	return nullptr;
+}
+

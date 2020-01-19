@@ -89,7 +89,7 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 				VertexInputAttribute[i].location = static_cast<uint32>(i);
 				VertexInputAttribute[i].format = TranslateVertexFormat(cElement.Type);
 				VertexInputAttribute[i].binding = desc.InputLayout.Elements[i].IsInstance ? 1 : 0;
-				Stride = max(VertexFormatToSize(cElement.Type) + VertexInputAttribute[i].offset, Stride);
+				Stride = BearMath::max(VertexFormatToSize(cElement.Type) + static_cast<bsize>(VertexInputAttribute[i].offset), Stride);
 				VertexInputCount++;
 			}
 			VertexInputBinding[0].stride = static_cast<uint32>(Stride);
