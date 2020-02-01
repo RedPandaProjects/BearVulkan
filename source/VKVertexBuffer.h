@@ -9,6 +9,7 @@ public:
 	virtual void* Lock();
 	virtual void Unlock();
 	virtual void Clear();
+	virtual bsize GetCount();
 	VkBuffer Buffer;
 	VkVertexInputBindingDescription VertexDescription;
 	bsize Size;

@@ -1,10 +1,11 @@
 #include "VKPCH.h"
-
+bsize IndexBufferCounter = 0;
 VKIndexBuffer::VKIndexBuffer()
 {
 	Buffer = 0;
 	Memory = 0;
 	m_dynamic = false; Size = 0;
+	IndexBufferCounter++;
 }
 
 void VKIndexBuffer::Create(bsize Count, bool Dynamic)
@@ -21,6 +22,7 @@ void VKIndexBuffer::Create(bsize Count, bool Dynamic)
 
 VKIndexBuffer::~VKIndexBuffer()
 {
+	IndexBufferCounter--;
 	Clear();
 }
 

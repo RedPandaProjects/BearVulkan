@@ -1,12 +1,14 @@
 #include "VKPCH.h"
-
+bsize ShaderCounter = 0;
 VKShader::VKShader(BearShaderType type):Type(type)
 {
+	ShaderCounter++;
 	Shader.module = 0;
 }
 
 VKShader::~VKShader()
 {
+	ShaderCounter--;
 	if (Shader.module)vkDestroyShaderModule(Factory->Device, Shader.module, 0);
 }
 

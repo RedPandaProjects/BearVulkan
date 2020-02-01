@@ -1,7 +1,8 @@
 #include "VKPCH.h"
-
+bsize VertexBufferCounter = 0;
 VKVertexBuffer::VKVertexBuffer() :m_dynamic(false)
 {
+	VertexBufferCounter++;
 	Buffer = 0;
 	Memory = 0;
 	Size = 0;
@@ -25,6 +26,7 @@ void VKVertexBuffer::Create(bsize Stride, bsize Count, bool Dynamic)
 
 VKVertexBuffer::~VKVertexBuffer()
 {
+	VertexBufferCounter--;
 	Clear();
 }
 
@@ -51,4 +53,10 @@ void VKVertexBuffer::Clear()
 	Buffer = 0;
 	if (Memory)vkFreeMemory(Factory->Device, Memory, 0);
 	Memory = 0;
+}
+
+bsize VKVertexBuffer::GetCount()
+{
+	if (VertexDescription.stride == 0)return 0;
+	return Size/ VertexDescription.stride;
 }

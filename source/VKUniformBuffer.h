@@ -9,6 +9,7 @@ public:
 	virtual void* Lock();
 	virtual void Unlock();
 	virtual void Clear();
+
 	VkBuffer Buffer;
 	bsize Size;
 	VkDescriptorBufferInfo BufferInfo;

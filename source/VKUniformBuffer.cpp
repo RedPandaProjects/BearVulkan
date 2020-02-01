@@ -1,10 +1,11 @@
 #include "VKPCH.h"
-
+bsize UniformBufferCounter = 0;
 VKUniformBuffer::VKUniformBuffer() :m_dynamic(false)
 {
 	Buffer = 0;
 	Memory = 0;
 	Size = 0;
+	UniformBufferCounter++;
 }
 
 void VKUniformBuffer::Create(bsize Size_, bool Dynamic)
@@ -26,6 +27,7 @@ void VKUniformBuffer::Create(bsize Size_, bool Dynamic)
 
 VKUniformBuffer::~VKUniformBuffer()
 {
+	UniformBufferCounter--;
 	Clear();
 }
 
@@ -53,3 +55,4 @@ void VKUniformBuffer::Clear()
 	if (Memory)vkFreeMemory(Factory->Device, Memory, 0);
 	Memory = 0;
 }
+
