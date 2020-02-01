@@ -1,4 +1,5 @@
 #include "VKPCH.h"
+bsize PipelineCounter = 0;
 inline VkFormat TranslateVertexFormat(BearVertexFormat format)
 {
 	switch (format)
@@ -58,6 +59,7 @@ inline bsize VertexFormatToSize(BearVertexFormat format)
 }
 VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 {
+	PipelineCounter++;
 	VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
 	VkPipelineDynamicStateCreateInfo DynamicState = {};
 	{
@@ -133,34 +135,47 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 		RasterizationState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		RasterizationState.pNext = NULL;
 		RasterizationState.flags = 0;
-		RasterizationState.polygonMode = VK_POLYGON_MODE_FILL;
-		RasterizationState.cullMode = VK_CULL_MODE_BACK_BIT;
-		RasterizationState.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		RasterizationState.polygonMode = VKFactory::Translate(desc.RasterizerState.FillMode);
+		RasterizationState.cullMode = VKFactory::Translate(desc.RasterizerState.CullMode);;
+		RasterizationState.frontFace = VKFactory::Translate(desc.RasterizerState.FrontFace);;;
 		RasterizationState.depthClampEnable = VK_FALSE;
 		RasterizationState.rasterizerDiscardEnable = VK_FALSE;
-		RasterizationState.depthBiasEnable = VK_FALSE;
-		RasterizationState.depthBiasConstantFactor = 0;
+		RasterizationState.depthBiasEnable =VK_TRUE;
+		RasterizationState.depthBiasConstantFactor = desc.RasterizerState.DepthBias;
 		RasterizationState.depthBiasClamp = 0;
-		RasterizationState.depthBiasSlopeFactor = 0;
+		RasterizationState.depthBiasSlopeFactor = desc.RasterizerState.SlopeScaleDepthBias;
 		RasterizationState.lineWidth = 1.0f;
 	}
 
 	VkPipelineColorBlendStateCreateInfo BlendState;
-	VkPipelineColorBlendAttachmentState BlendAttachment[1];
+	VkPipelineColorBlendAttachmentState BlendAttachment[8];
 	{
 		BlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		BlendState.pNext = NULL;
 		BlendState.flags = 0;
-
-		BlendAttachment[0].colorWriteMask = 0xf;
-		BlendAttachment[0].blendEnable = VK_FALSE;
-		BlendAttachment[0].alphaBlendOp = VK_BLEND_OP_ADD;
-		BlendAttachment[0].colorBlendOp = VK_BLEND_OP_ADD;
-		BlendAttachment[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-		BlendAttachment[0].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-		BlendAttachment[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		BlendAttachment[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		BlendState.attachmentCount = 1;
+		for (bsize i = 0; i < 8; i++)
+		{
+			BlendAttachment[i].blendEnable = desc.BlendState.RenderTarget[i].Enable;
+			BlendAttachment[i].alphaBlendOp = VKFactory::Translate(desc.BlendState.RenderTarget[i].Alpha);
+			BlendAttachment[i].colorBlendOp = VKFactory::Translate(desc.BlendState.RenderTarget[i].Color);
+			BlendAttachment[i].srcColorBlendFactor = VKFactory::Translate(desc.BlendState.RenderTarget[i].ColorSrc);
+			BlendAttachment[i].dstColorBlendFactor = VKFactory::Translate(desc.BlendState.RenderTarget[i].ColorDst);
+			BlendAttachment[i].srcAlphaBlendFactor = VKFactory::Translate(desc.BlendState.RenderTarget[i].AlphaSrc);
+			BlendAttachment[i].dstAlphaBlendFactor = VKFactory::Translate(desc.BlendState.RenderTarget[i].AlphaDst);
+			BlendAttachment[i].colorWriteMask = 0;
+			if (desc.BlendState.RenderTarget[i].ColorWriteMask & CWM_R)
+				BlendAttachment[i].colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+			if (desc.BlendState.RenderTarget[i].ColorWriteMask & CWM_G)
+				BlendAttachment[i].colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+			if (desc.BlendState.RenderTarget[i].ColorWriteMask & CWM_B)
+				BlendAttachment[i].colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+			if (desc.BlendState.RenderTarget[i].ColorWriteMask & CWM_A)
+				BlendAttachment[i].colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+		}
+	
+		
+		
+		BlendState.attachmentCount = 8;
 		BlendState.pAttachments = BlendAttachment;
 		BlendState.logicOpEnable = VK_FALSE;
 		BlendState.logicOp = VK_LOGIC_OP_NO_OP;
@@ -189,21 +204,35 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 		DepthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		DepthStencilState.pNext = NULL;
 		DepthStencilState.flags = 0;
-		DepthStencilState.depthTestEnable = VK_FALSE;
-		DepthStencilState.depthWriteEnable = VK_FALSE;
-		DepthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		DepthStencilState.depthTestEnable = desc.DepthStencilState.DepthEnable;
+		DepthStencilState.depthWriteEnable = desc.DepthStencilState.EnableDepthWrite;
+		DepthStencilState.depthCompareOp = VKFactory::Translate(desc.DepthStencilState.DepthTest);
 		DepthStencilState.depthBoundsTestEnable = VK_FALSE;
 		DepthStencilState.minDepthBounds = 0;
 		DepthStencilState.maxDepthBounds = 0;
-		DepthStencilState.stencilTestEnable = VK_FALSE;
-		DepthStencilState.back.failOp = VK_STENCIL_OP_KEEP;
-		DepthStencilState.back.passOp = VK_STENCIL_OP_KEEP;
-		DepthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
-		DepthStencilState.back.compareMask = 0;
-		DepthStencilState.back.reference = 0;
-		DepthStencilState.back.depthFailOp = VK_STENCIL_OP_KEEP;
-		DepthStencilState.back.writeMask = 0;
-		DepthStencilState.front = DepthStencilState.back;
+		DepthStencilState.stencilTestEnable = desc.DepthStencilState.StencillEnable;
+
+		if (!desc.DepthStencilState.BackStencillEnable)
+		{
+			DepthStencilState.front.failOp = VKFactory::Translate(desc.DepthStencilState.FrontFace.StencilFailOp);
+			DepthStencilState.front.passOp = VKFactory::Translate(desc.DepthStencilState.FrontFace.StencilPassOp);
+			DepthStencilState.front.compareOp = VKFactory::Translate(desc.DepthStencilState.FrontFace.StencilTest);
+			DepthStencilState.front.compareMask = desc.DepthStencilState.StencilReadMask;
+			DepthStencilState.front.reference = 0;
+			DepthStencilState.front.depthFailOp = VKFactory::Translate(desc.DepthStencilState.FrontFace.StencilDepthFailOp);;
+			DepthStencilState.front.writeMask = desc.DepthStencilState.StencilWriteMask;;
+			DepthStencilState.back = DepthStencilState.front;
+		}
+		else
+		{
+			DepthStencilState.back.failOp = VKFactory::Translate(desc.DepthStencilState.BackFace.StencilFailOp);
+			DepthStencilState.back.passOp = VKFactory::Translate(desc.DepthStencilState.BackFace.StencilPassOp);
+			DepthStencilState.back.compareOp = VKFactory::Translate(desc.DepthStencilState.BackFace.StencilTest);
+			DepthStencilState.back.compareMask = desc.DepthStencilState.StencilReadMask;
+			DepthStencilState.back.reference = 0;
+			DepthStencilState.back.depthFailOp = VKFactory::Translate(desc.DepthStencilState.BackFace.StencilDepthFailOp);;
+			DepthStencilState.back.writeMask = desc.DepthStencilState.StencilWriteMask;;
+		}
 	}
 
 	VkPipelineMultisampleStateCreateInfo MultisampleState;
@@ -236,6 +265,7 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 		}
 	}
 	RootSignature = desc.RootSignature;
+
 	BEAR_ASSERT(RootSignature.empty() == false);
 	RootSignaturePointer = static_cast<VKRootSignature*>(RootSignature.get());
 	VkGraphicsPipelineCreateInfo info = {};
@@ -255,11 +285,16 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 	info.pViewportState = &ViewportState;
 	info.pDepthStencilState = &DepthStencilState;
 	info.pStages = ShaderStage;
-	info.stageCount = static_cast<uint32>(CountShader); ; ;
+	if (desc.RenderPass.empty())
+		info.renderPass = Factory->RenderPass;
+	else
+		info.renderPass = static_cast<const VKRenderPass*>(desc.RenderPass.get())->RenderPass;
+	info.stageCount = static_cast<uint32>(CountShader); 
 	info.subpass = 0;
 	V_CHK(vkCreateGraphicsPipelines(Factory->Device, Factory->PipelineCacheDefault, 1, &info, NULL, &Pipeline));
 }
 
 VKPipeline::~VKPipeline()
 {
+	PipelineCounter--;
 }

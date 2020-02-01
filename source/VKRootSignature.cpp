@@ -1,4 +1,5 @@
 #include "VKPCH.h"
+bsize RootSignatureCounter = 0;
 inline VkShaderStageFlagBits TransletionShaderVisible(BearShaderType Type)
 {
 	switch (Type)
@@ -17,12 +18,17 @@ inline VkShaderStageFlagBits TransletionShaderVisible(BearShaderType Type)
 }
 VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description)
 {
+	RootSignatureCounter++;
 	CountBuffers = 0;
+	CountSamplers = 0;
+	CountSRVs = 0;
 	{
 		for (; CountBuffers < 16 && Description.UniformBuffers[CountBuffers].Shader != ST_Null; CountBuffers++);
+		for (; CountSRVs < 16 && Description.SRVResources[CountSRVs].Shader != ST_Null; CountSRVs++);
+		for (; CountSamplers < 16 && Description.Samplers[CountSamplers].Shader != ST_Null; CountSamplers++);
 	}
 	
-	bsize Count = CountBuffers;
+	bsize Count = CountBuffers+ CountSRVs+ CountSamplers;
 	{
 		bsize Offset = 0;
 		VkDescriptorSetLayoutBinding LayoutBinding[64];
@@ -36,6 +42,23 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 				LayoutBinding[i + Offset].stageFlags = TransletionShaderVisible(Description.UniformBuffers[i].Shader);
 			}
 			Offset += CountBuffers;
+			for (bsize i = 0; i < CountSRVs; i++)
+			{
+				LayoutBinding[i + Offset].binding = static_cast<uint32_t>(i + Offset);
+				LayoutBinding[i + Offset].descriptorCount = 1;
+				LayoutBinding[i + Offset].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				LayoutBinding[i + Offset].pImmutableSamplers = nullptr;
+				LayoutBinding[i + Offset].stageFlags = TransletionShaderVisible(Description.SRVResources[i].Shader);
+			}
+			Offset += CountSRVs;
+			for (bsize i = 0; i < CountSamplers; i++)
+			{
+				LayoutBinding[i + Offset].binding = static_cast<uint32_t>(i + Offset);
+				LayoutBinding[i + Offset].descriptorCount = 1;
+				LayoutBinding[i + Offset].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+				LayoutBinding[i + Offset].pImmutableSamplers = nullptr;
+				LayoutBinding[i + Offset].stageFlags = TransletionShaderVisible(Description.Samplers[i].Shader);
+			}
 		}
 
 		VkDescriptorSetLayoutCreateInfo LayoutCreateInfo = {};
@@ -56,32 +79,13 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 
 		V_CHK(vkCreatePipelineLayout(Factory->Device, &PipelineLayoutCreateInfo, NULL, &PipelineLayout));
 	}
-	{
-		VkDescriptorPoolSize PoolSizes[64];
-		bsize Offset = 0;
-		for (bsize i = 0; i < CountBuffers; i++)
-		{
-			PoolSizes[i + Offset].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			PoolSizes[i + Offset].descriptorCount = 1;
-		}
-		Offset += CountBuffers;
-
-		VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {};
-		DescriptorPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		DescriptorPoolCreateInfo.pNext = NULL;
-		DescriptorPoolCreateInfo.maxSets = 1;
-		DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(Count);;;
-		DescriptorPoolCreateInfo.pPoolSizes = PoolSizes;
-
-		V_CHK(vkCreateDescriptorPool(Factory->Device, &DescriptorPoolCreateInfo, NULL, &DescriptorPool));
-	}
+		
 
 }
 
 VKRootSignature::~VKRootSignature()
 {
-
-	vkDestroyDescriptorPool(Factory->Device, DescriptorPool, 0);
+	RootSignatureCounter--;
 	vkDestroyPipelineLayout(Factory->Device, PipelineLayout, 0);
 	vkDestroyDescriptorSetLayout(Factory->Device, DescriptorSetLayout, 0);
 }

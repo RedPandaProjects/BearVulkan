@@ -6,6 +6,7 @@ bool RHIInitialize()
 	if (!Factory->Empty())
 	{
 		GFactory = Factory;
+		GStats = bear_new<VKStats>();
 		BEAR_ASSERT(GFactory);
 		return true;
 	}

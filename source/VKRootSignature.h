@@ -6,9 +6,10 @@ public:
 	VKRootSignature(const BearRootSignatureDescription& desc);
 	virtual ~VKRootSignature();
 	bsize CountBuffers;
-	
+	bsize CountSRVs;
+	bsize CountSamplers;
 	VkPipelineLayout PipelineLayout;
-	VkDescriptorPool DescriptorPool;
+	
 	VkDescriptorSetLayout DescriptorSetLayout;
 
 };

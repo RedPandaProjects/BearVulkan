@@ -1,11 +1,12 @@
 #include "VKPCH.h"
 static const char* InstanceExtensions[] =
 {
+
+	VK_KHR_SURFACE_EXTENSION_NAME,
+	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #ifdef DEBUG
 	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif
-	VK_KHR_SURFACE_EXTENSION_NAME,
-	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 };
 static const char* DeviceExtensions[] =
 {
@@ -38,7 +39,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 }
 #endif
 
-VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0), PipelineLayout(0)
+VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0), PipelineLayout(0), m_CommandPool(0),DefaultSampler(0), RenderPass(0)
 {
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -67,8 +68,13 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 	VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo;
 	DebugCreateInfo = {};
 	DebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+	DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+		VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
 	DebugCreateInfo.pfnUserCallback = debugCallback;
 	inst_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugCreateInfo;
 #else
@@ -164,11 +170,106 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 			PipelineCache.flags = 0;
 			V_CHK(vkCreatePipelineCache(Device, &PipelineCache, 0, &PipelineCacheDefault));
 		}
+
+		{
+			VkCommandPoolCreateInfo cmd_pool_info = {};
+			cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			cmd_pool_info.pNext = NULL;
+			cmd_pool_info.queueFamilyIndex = QueueFamilyIndex;
+			cmd_pool_info.flags = 0;
+
+			V_CHK(vkCreateCommandPool(Device, &cmd_pool_info, NULL, &m_CommandPool));
+
+
+			VkCommandBufferAllocateInfo cmd = {};
+			cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			cmd.pNext = NULL;
+			cmd.commandPool = m_CommandPool;
+			cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			cmd.commandBufferCount = 1;
+
+			V_CHK(vkAllocateCommandBuffers(Device, &cmd, &CommandBuffer));
+			//	vkFreeCommandBuffers
+		}
+
+		{
+			VkSamplerCreateInfo samplerInfo = {};
+			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			samplerInfo.magFilter = VK_FILTER_LINEAR;
+			samplerInfo.minFilter = VK_FILTER_LINEAR;
+			samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			samplerInfo.anisotropyEnable = VK_TRUE;
+			samplerInfo.maxAnisotropy = 16;
+			samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+			samplerInfo.unnormalizedCoordinates = VK_FALSE;
+			samplerInfo.compareEnable = VK_FALSE;
+			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+			samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+			V_CHK(vkCreateSampler(Device, &samplerInfo, nullptr, &DefaultSampler));
+		}
+		{
+			VkAttachmentDescription attachments[2];
+			attachments[0].format = VK_FORMAT_R8G8B8A8_UNORM;
+			attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+			attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			attachments[0].flags = 0;
+
+			VkAttachmentReference color_reference = {};
+			color_reference.attachment = 0;
+			color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			VkAttachmentReference depth_reference = {};
+			depth_reference.attachment = 1;
+			depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			VkSubpassDescription subpass = {};
+			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass.flags = 0;
+			subpass.inputAttachmentCount = 0;
+			subpass.pInputAttachments = NULL;
+			subpass.colorAttachmentCount = 1;
+			subpass.pColorAttachments = &color_reference;
+			subpass.pResolveAttachments = NULL;
+			subpass.pDepthStencilAttachment = NULL;
+			subpass.preserveAttachmentCount = 0;
+			subpass.pPreserveAttachments = NULL;
+
+			VkRenderPassCreateInfo rp_info = {};
+			rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			rp_info.pNext = NULL;
+			rp_info.attachmentCount = 1;
+			rp_info.pAttachments = attachments;
+			rp_info.subpassCount = 1;
+			rp_info.pSubpasses = &subpass;
+			rp_info.dependencyCount = 0;
+			rp_info.pDependencies = NULL;
+
+			V_CHK(vkCreateRenderPass(Device, &rp_info, NULL, &RenderPass));
+		}
 	}
+
 }
 
 VKFactory::~VKFactory()
 {
+	if (RenderPass) {
+		vkDestroyRenderPass(Device, RenderPass, 0);
+	}
+	if (DefaultSampler) { vkDestroySampler(Device, DefaultSampler, 0); }
+	if(m_CommandPool)
+	{
+		VkCommandBuffer cmd_bufs[1] = { CommandBuffer };
+		vkFreeCommandBuffers(Device, m_CommandPool, 1, cmd_bufs);
+		vkDestroyCommandPool(Device, m_CommandPool, NULL);
+	}
 #ifdef DEBUG 
 	DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
 #endif
@@ -227,13 +328,386 @@ BearRHI::BearRHIDescriptorHeap* VKFactory::CreateDescriptorHeap(const BearDescri
 	return bear_new<VKDescriptorHeap>(Description);
 }
 
-BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(bsize Width, bsize Height, bsize Mips, bsize Count, BearTexturePixelFormat PixelFormat, void* data)
+BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(bsize Width, bsize Height, bsize Mips, bsize Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data)
 {
-	return nullptr;
+	return bear_new<VKTexture2D>(Width,Height,Mips,Count, PixelFormat, TypeUsage,data);
 }
 
-BearRHI::BearRHISampler* VKFactory::CreateSampler()
+BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(bsize Width, bsize Height, BearRenderTargetFormat Format)
 {
-	return nullptr;
+	return bear_new<VKTexture2D>(Width, Height, Format);
+}
+
+BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(bsize Width, bsize Height, BearDepthStencilFormat Format)
+{
+	return bear_new<VKTexture2D>(Width, Height, Format);
+}
+
+BearRHI::BearRHISampler* VKFactory::CreateSampler(const BearSamplerDescription& Description)
+{
+	return  bear_new<VKSamplerState>(Description);;
+}
+
+BearRHI::BearRHIRenderPass* VKFactory::CreateRenderPass(const BearRenderPassDescription& Description)
+{
+	return  bear_new<VKRenderPass>(Description);;;
+}
+
+BearRHI::BearRHIFrameBuffer* VKFactory::CreateFrameBuffer(const BearFrameBufferDescription& Description)
+{
+	return  bear_new<VKFrameBuffer>(Description);;;
+}
+
+VkSamplerAddressMode VKFactory::Translation(BearSamplerAddressMode format)
+{
+	switch (format)
+	{
+	case SAM_WRAP:
+		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		break;
+	case SAM_MIRROR:
+		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+		break;
+	case SAM_CLAMP:
+		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		break;
+	case SAM_BORDER:
+		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
+}
+
+VkCullModeFlagBits VKFactory::Translate(BearRasterizerCullMode format)
+{
+	switch (format)
+	{
+	case RCM_NONE:
+		return VK_CULL_MODE_NONE;
+		break;
+	case RCM_FRONT:
+		return VK_CULL_MODE_FRONT_BIT;
+		break;
+	case RCM_BACK:
+		return VK_CULL_MODE_BACK_BIT;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_CULL_MODE_NONE;
+}
+
+VkPolygonMode VKFactory::Translate(BearRasterizerFillMode format)
+{
+	switch (format)
+	{
+	case RFM_WIREFRAME:
+		return VK_POLYGON_MODE_LINE;
+		break;
+	case RFM_SOLID:
+		return VK_POLYGON_MODE_FILL;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_POLYGON_MODE_FILL;
+
+}
+
+VkFrontFace VKFactory::Translate(BearRasterizerFrontFace format)
+{
+	switch (format)
+	{
+	case RFF_COUNTER_CLOCKWISE:
+		return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		break;
+	case RFF_FACE_CLOCKWISE:
+		return VK_FRONT_FACE_CLOCKWISE;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_FRONT_FACE_CLOCKWISE;
+}
+
+VkBlendFactor VKFactory::Translate(BearBlendFactor format)
+{
+	switch (format)
+	{
+	case BF_ZERO:
+		return VK_BLEND_FACTOR_ZERO;
+		break;
+	case BF_ONE:
+		return VK_BLEND_FACTOR_ONE;
+		break;
+	case BF_SRC_COLOR:
+		return VK_BLEND_FACTOR_SRC_COLOR;
+		break;
+	case BF_INV_SRC_COLOR:
+		return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+		break;
+	case BF_SRC_ALPHA:
+		return VK_BLEND_FACTOR_SRC_ALPHA;
+		break;
+	case BF_INV_SRC_ALPHA:
+		return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		break;
+	case BF_DEST_ALPHA:
+		return VK_BLEND_FACTOR_DST_ALPHA;
+		break;
+	case BF_INV_DEST_ALPHA:
+		return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+		break;
+	case BF_DEST_COLOR:
+		return VK_BLEND_FACTOR_DST_COLOR;
+		break;
+	case BF_INV_DEST_COLOR:
+		return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+		break;
+	case BF_BLEND_FACTOR:
+		return VK_BLEND_FACTOR_CONSTANT_COLOR;
+		break;
+	case BF_INV_BLEND_FACTOR:
+		return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_BLEND_FACTOR_ZERO;
+}
+
+VkBlendOp VKFactory::Translate(BearBlendOp format)
+{
+	switch (format)
+	{
+	case BO_ADD:
+		return VK_BLEND_OP_ADD;
+		break;
+	case BO_SUBTRACT:
+		VK_BLEND_OP_SUBTRACT;
+		break;
+	case BO_REV_SUBTRACT:
+		VK_BLEND_OP_REVERSE_SUBTRACT;
+		break;
+	case BO_MIN:
+		VK_BLEND_OP_MIN;
+		break;
+	case BO_MAX:
+		VK_BLEND_OP_MAX;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_BLEND_OP_ADD;
+}
+
+VkCompareOp VKFactory::Translate(BearCompareFunction format)
+{
+	switch (format)
+	{
+	case CF_NEVER:
+		return VK_COMPARE_OP_NEVER;
+		break;
+	case CF_ALWAYS:
+		return VK_COMPARE_OP_ALWAYS;
+		break;
+	case CF_EQUAL:
+		return VK_COMPARE_OP_EQUAL;
+		break;
+	case CF_NOTEQUAL:
+		return VK_COMPARE_OP_NOT_EQUAL;
+		break;
+	case CF_LESS:
+		return VK_COMPARE_OP_LESS;
+		break;
+	case CF_GREATER:
+		return VK_COMPARE_OP_GREATER;
+		break;
+	case CF_LESSEQUAL:
+		return VK_COMPARE_OP_LESS_OR_EQUAL;
+		break;
+	case CF_GREATEREQUAL:
+		return VK_COMPARE_OP_GREATER_OR_EQUAL;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_COMPARE_OP_NEVER;
+}
+
+VkStencilOp VKFactory::Translate(BearStencilOp format)
+{
+	switch (format)
+	{
+	case SO_KEEP:
+		return VK_STENCIL_OP_KEEP;
+		break;
+	case SO_ZERO:
+		return VK_STENCIL_OP_ZERO;
+		break;
+	case SO_REPLACE:
+		return VK_STENCIL_OP_REPLACE;
+		break;
+	case SO_INCR_SAT:
+		return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+		break;
+	case SO_DECR_SAT:
+		return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+		break;
+	case SO_INVERT:
+		return VK_STENCIL_OP_INVERT;
+		break;
+	case SO_INCR:
+		return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+		break;
+	case SO_DECR:
+		return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_STENCIL_OP_KEEP;
+}
+
+VkFormat VKFactory::Translation(BearTexturePixelFormat format)
+{
+	switch (format)
+	{
+	case TPF_NONE:
+		BEAR_RASSERT(0);
+		break;
+	case TPF_R8:
+		return VK_FORMAT_R8_UNORM;
+	case TPF_R8G8:
+		return VK_FORMAT_R8G8_UNORM;
+	case TPF_R8G8B8:
+		return VK_FORMAT_R8G8B8_UNORM;
+	case TPF_R8G8B8A8:
+		return VK_FORMAT_R8G8B8A8_UNORM;
+	case TPF_R32F:
+		return VK_FORMAT_R32_SFLOAT;
+	case TPF_R32G32F:
+		return VK_FORMAT_R32G32_SFLOAT;
+	case TPF_R32G32B32F:
+		return VK_FORMAT_R32G32B32_SFLOAT;
+	case TPF_R32G32B32A32F:
+		return VK_FORMAT_R32G32B32A32_SFLOAT;
+	case TPF_BC1:
+		return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
+	case TPF_BC1a:
+		return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+	case TPF_BC2:
+		return VK_FORMAT_BC2_UNORM_BLOCK;
+	case TPF_BC3:
+		return VK_FORMAT_BC3_UNORM_BLOCK;
+		break;
+	case TPF_BC4:
+		return VK_FORMAT_BC4_UNORM_BLOCK;
+	case TPF_BC5:
+		return VK_FORMAT_BC5_UNORM_BLOCK;
+	case TPF_BC6:
+		return VK_FORMAT_BC6H_SFLOAT_BLOCK;
+	case TPF_BC7:
+		return VK_FORMAT_BC7_UNORM_BLOCK;
+	default:	BEAR_RASSERT(0);
+		break;
+	}
+	return VK_FORMAT_UNDEFINED;
+}
+
+VkFormat VKFactory::Translation(BearRenderTargetFormat format)
+{
+	switch (format)
+	{
+	case RTF_NONE:
+		break;
+	case RTF_R8:
+		return VK_FORMAT_R8_UNORM;
+		break;
+	case RTF_R8G8:
+		return VK_FORMAT_R8G8_UNORM;
+		break;
+	case RTF_R8G8B8A8:
+		return VK_FORMAT_R8G8B8A8_UNORM;
+		break;
+	case RTF_B8G8R8A8:
+		return VK_FORMAT_B8G8R8A8_UNORM;
+		break;
+	case RTF_R32F:
+		return VK_FORMAT_R32_SFLOAT;
+		break;
+	case RTF_R32G32F:
+		return VK_FORMAT_R32G32_SFLOAT;
+		break;
+	case RTF_R32G32B32F:
+		return VK_FORMAT_R32G32B32_SFLOAT;
+		break;
+	case RTF_R32G32B32A32F:
+		return VK_FORMAT_R32G32B32A32_SFLOAT;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	};
+	return VK_FORMAT_R32G32B32A32_SFLOAT;
+}
+
+VkFormat VKFactory::Translation(BearDepthStencilFormat format)
+{
+	switch (format)
+	{
+	case DSF_DEPTH16:
+		return VK_FORMAT_D16_UNORM;
+		break;
+	case DSF_DEPTH32F:
+		return VK_FORMAT_D32_SFLOAT;
+		break;
+	case DSF_DEPTH24_STENCIL8:
+		return VK_FORMAT_D24_UNORM_S8_UINT;
+		break;
+	case DSF_DEPTH32F_STENCIL8:
+		return VK_FORMAT_D32_SFLOAT_S8_UINT;
+		break;
+	default:
+		BEAR_ASSERT(0);
+		break;
+	}
+	return VK_FORMAT_D32_SFLOAT_S8_UINT;
+}
+
+void VKFactory::LockCommandBuffer()
+{
+	m_CommandMutex.Lock();
+	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+	{
+		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	}
+	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+}
+
+void VKFactory::UnlockCommandBuffer(const VkSemaphore* pSignalSemaphores)
+{
+	V_CHK(vkEndCommandBuffer(CommandBuffer));
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &CommandBuffer;
+	submitInfo.pSignalSemaphores = pSignalSemaphores;
+	submitInfo.signalSemaphoreCount = pSignalSemaphores ? 1 : 0;
+	V_CHK(vkQueueSubmit(Queue, 1, &submitInfo, VK_NULL_HANDLE));
+	V_CHK(vkQueueWaitIdle(Queue));
+
+	m_CommandMutex.Unlock();
 }
 
