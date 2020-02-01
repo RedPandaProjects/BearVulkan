@@ -1,8 +1,8 @@
 #include "VKPCH.h"
-
+bsize ViewportCounter = 0;
 VKViewport::VKViewport(void * Handle, bsize Width_, bsize Height_, bool Fullscreen, bool VSync, const BearViewportDescription&Description_):Width(Width_),Height(Height_), Description(Description_)
 {
-	
+	ViewportCounter++;
 	m_FullScreen = 0;
 	m_WindowHandle = (HWND)Handle;
 	ClearColor = Description.ClearColor;
@@ -62,11 +62,12 @@ VKViewport::~VKViewport()
 	{
 		vkDestroyQueue
 	}*/
-	
+	ViewportCounter--;
 	vkDestroyFence(Factory->Device, PresentFence,0);
 	vkDestroySemaphore(Factory->Device, Semaphore, 0);
 	DestroySwapChain(SwapChain);
 	vkDestroySurfaceKHR(Factory->Instance, Surface, 0);
+	vkDestroyRenderPass(Factory->Device, RenderPass,0);
 }
 
 void VKViewport::SetVSync(bool Sync)
@@ -121,6 +122,36 @@ void VKViewport::Resize(bsize width, bsize height)
 	Height = height;
 }
 
+void VKViewport::Copy(BearFactoryPointer<BearRHI::BearRHITexture2D> Src)
+{
+	if (Src.empty())return;
+
+	if (static_cast<VKTexture2D*>(Src.get())->Image == 0)return;
+	auto src = static_cast<VKTexture2D*>(Src.get());
+	VkImageCopy ImageCopy = {};
+
+	if (src->ImageInfo.extent.width != Width)return;
+	if (src->ImageInfo.extent.height != Height)return;;
+	if (src->ImageInfo.extent.depth != 1)return;;
+	if (src->ImageInfo.mipLevels != 1)return;
+	Factory->LockCommandBuffer();
+	TransitionImageLayout(Factory->CommandBuffer,src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src->ImageInfo.mipLevels, src->ImageInfo.extent.depth);
+	TransitionImageLayout(Factory->CommandBuffer, SwapChainImages[FrameIndex], SwapChainImageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1, 1);
+	ImageCopy.extent.width = src->ImageInfo.extent.width;
+	ImageCopy.extent.height = src->ImageInfo.extent.height;
+	ImageCopy.extent.depth = 1;
+	ImageCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	ImageCopy.dstSubresource.layerCount = 1;
+	ImageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	ImageCopy.srcSubresource.layerCount = 1;
+
+	vkCmdCopyImage(Factory->CommandBuffer, src->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SwapChainImages[FrameIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ImageCopy);
+	TransitionImageLayout(Factory->CommandBuffer, SwapChainImages[FrameIndex], SwapChainImageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, 1);
+	TransitionImageLayout(Factory->CommandBuffer, src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, src->ImageInfo.mipLevels, src->ImageInfo.extent.depth);
+	Factory->UnlockCommandBuffer(&Semaphore);
+	Swap();
+}
+
 
 
 void VKViewport::Swap()
@@ -149,6 +180,26 @@ void VKViewport::Swap()
 	V_CHK(vkAcquireNextImageKHR(Factory->Device, SwapChain, UINT64_MAX, Semaphore, VK_NULL_HANDLE,
 		&FrameIndex));
 
+}
+
+BearRenderTargetFormat VKViewport::GetFormat()
+{
+	switch (SwapChainImageFormat)
+	{
+	case VK_FORMAT_R8G8B8A8_UNORM:
+		return  RTF_R8G8B8A8;
+		break;
+	case VK_FORMAT_B8G8R8A8_UNORM:
+		return  RTF_B8G8R8A8;
+		break;
+	case VK_FORMAT_R32G32B32A32_SFLOAT:
+		return  RTF_R32G32B32A32F;
+		break;
+	default:
+		BEAR_RASSERT(0);
+		break;
+	}
+	return  RTF_B8G8R8A8;
 }
 
 VkRenderPassBeginInfo VKViewport::GetRenderPass()

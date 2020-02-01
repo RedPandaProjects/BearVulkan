@@ -29,3 +29,11 @@ extern VKFactory* Factory;
 #include "VKRootSignature.h"
 #include "VKPipeline.h"
 #include "VKDescriptorHeap.h"
+
+#include "VKSamplers.h"
+#include "VKShaderResource.h"
+#include "VKTexture2D.h"
+#include "VKStats.h"
+
+#include "VKRenderPass.h" 
+#include "VKFrameBuffer.h"
