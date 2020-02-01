@@ -8,7 +8,7 @@ public:
 	virtual void Wait();
 	virtual void Flush(bool wiat);
 	virtual void AttachViewportAsFrameBuffer(BearFactoryPointer<BearRHI::BearRHIViewport> Viewport);
-
+	virtual void AttachFrameBuffer(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> FrameBuffer);
 
 	virtual void DetachFrameBuffer();
 	virtual void ClearFrameBuffer();
@@ -16,6 +16,7 @@ public:
 	virtual void Copy(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Src);
 	virtual void Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Src);
 	virtual void Copy(BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Src);
+	virtual void Copy(BearFactoryPointer<BearRHI::BearRHITexture2D> Dst, BearFactoryPointer<BearRHI::BearRHITexture2D> Src);
 
 	virtual void SetDescriptorHeap(BearFactoryPointer<BearRHI::BearRHIDescriptorHeap> DescriptorHeap);
 	virtual void SetPipeline(BearFactoryPointer<BearRHI::BearRHIPipeline> Pipeline);
@@ -32,6 +33,8 @@ private:
 	int8 m_Status;
 
 	BearFactoryPointer<BearRHI::BearRHIViewport> m_viewport;
+	BearFactoryPointer<BearRHI::BearRHIFrameBuffer> m_frame_buffer;
+
 	VkCommandPool CommandPool;
 	VkCommandBuffer CommandBuffer;
 	VkSemaphore SemaphoreWait;
@@ -41,6 +44,7 @@ private:
 	VkRect2D Scissor;
 
 	bool ScissorEnable;
+	BearVector< VkImageCopy> ImageCopyStack;
 private:
 	bool m_use_renderpass;
 };

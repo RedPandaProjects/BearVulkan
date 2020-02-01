@@ -1,7 +1,8 @@
 #include "VKPCH.h"
-
+bsize ContextCounter = 0;
 VKContext::VKContext():m_Status(0)
 {
+	ContextCounter++;
 	VkCommandPoolCreateInfo cmd_pool_info = {};
 	cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	cmd_pool_info.pNext = NULL;
@@ -52,6 +53,7 @@ VKContext::~VKContext()
 	VkCommandBuffer cmd_bufs[1] = { CommandBuffer };
 	vkFreeCommandBuffers(Factory->Device, CommandPool, 1, cmd_bufs);
 	vkDestroyCommandPool(Factory->Device, CommandPool, NULL);
+	ContextCounter--;
 }
 
 void VKContext::Wait()
@@ -70,6 +72,12 @@ void VKContext::Wait()
 void VKContext::Flush(bool wait)
 {
 	static VkPipelineStageFlags stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	if (!m_frame_buffer.empty())
+	{
+		auto frame_buffer = static_cast<VKFrameBuffer*>(m_frame_buffer.get());
+		frame_buffer->ToTexture(CommandBuffer);
+	}
+
 	if (m_Status != 1)
 		return;
 	if(m_use_renderpass)
@@ -118,11 +126,18 @@ void VKContext::AttachViewportAsFrameBuffer(BearFactoryPointer<BearRHI::BearRHIV
 
 }
 
+void VKContext::AttachFrameBuffer(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> FrameBuffer)
+{
+	DetachFrameBuffer();
+	m_frame_buffer = FrameBuffer;
+}
+
 
 
 void VKContext::DetachFrameBuffer()
 {
 	PreDestroy();
+	m_frame_buffer.clear();
 	m_viewport.clear();
 }
 
@@ -130,8 +145,28 @@ void VKContext::ClearFrameBuffer()
 {
 	if (UpdateStatus() != 0)return;
 	m_Status = 1;
-	auto SwapChain = static_cast<VKViewport*>(m_viewport.get());
+	
 
+	VkFramebuffer FreameBuffer = 0;
+	VkRenderPassBeginInfo RenderPassBeginInfo;
+
+	if (m_viewport.get())
+	{
+		VKViewport* SwapChain = static_cast<VKViewport*>(m_viewport.get());
+		FreameBuffer = SwapChain->Framebuffers[SwapChain->FrameIndex];
+		RenderPassBeginInfo = SwapChain->GetRenderPass();
+	}
+	else if (m_frame_buffer.get())
+	{
+		auto frame_buffer = static_cast<VKFrameBuffer*>(m_frame_buffer.get());
+		FreameBuffer = frame_buffer->FrameBuffer;
+		RenderPassBeginInfo = frame_buffer->GetRenderPass();
+	}
+	else
+	{
+		return;
+	}
+	
 
 	VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo;
 	{
@@ -139,7 +174,7 @@ void VKContext::ClearFrameBuffer()
 		CommandBufferInheritanceInfo.pNext = nullptr;
 		CommandBufferInheritanceInfo.renderPass = 0;
 		CommandBufferInheritanceInfo.subpass = 0;
-		CommandBufferInheritanceInfo.framebuffer = static_cast<VKViewport*>(m_viewport.get())->Framebuffers[SwapChain->FrameIndex];
+		CommandBufferInheritanceInfo.framebuffer = FreameBuffer;
 		CommandBufferInheritanceInfo.occlusionQueryEnable = VK_FALSE;
 		CommandBufferInheritanceInfo.queryFlags = 0;
 		CommandBufferInheritanceInfo.pipelineStatistics = 0;
@@ -152,8 +187,14 @@ void VKContext::ClearFrameBuffer()
 		CommandBufferBeginInfo.pInheritanceInfo = &CommandBufferInheritanceInfo;
 	}
 	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
-	auto RpBegin = SwapChain->GetRenderPass();
-	vkCmdBeginRenderPass(CommandBuffer, &RpBegin, VK_SUBPASS_CONTENTS_INLINE);
+
+	if (m_frame_buffer.get())
+	{
+		auto frame_buffer = static_cast<VKFrameBuffer*>(m_frame_buffer.get());
+		frame_buffer->ToRT(CommandBuffer);
+	}
+
+	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	m_use_renderpass = true;
 	{
 		vkCmdSetViewport(CommandBuffer, 0, 1, &Viewport);
@@ -209,7 +250,57 @@ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearF
 	CopyBuffer(CommandBuffer, static_cast<VKVertexBuffer*>(Src.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Size);
 	m_Status = 1;
 }
+ void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHITexture2D> Dst, BearFactoryPointer<BearRHI::BearRHITexture2D> Src)
+{
+	if (m_Status == 2)return;
+	if (Dst.empty() || Src.empty())return;
+	if (static_cast<VKTexture2D*>(Dst.get())->Image == 0)return;
 
+	if (static_cast<VKTexture2D*>(Src.get())->Image == 0)return;
+	auto dst = static_cast<VKTexture2D*>(Dst.get());
+	auto src = static_cast<VKTexture2D*>(Src.get());
+
+
+	if (src->ImageInfo.extent.width != dst->ImageInfo.extent.width)return;
+	if (src->ImageInfo.extent.height != dst->ImageInfo.extent.height)return;;
+	if (src->ImageInfo.extent.depth != dst->ImageInfo.extent.depth)return;;
+	if (dst->ImageInfo.mipLevels!=1)
+	 if (src->ImageInfo.mipLevels != dst->ImageInfo.mipLevels)return;
+	if (m_Status == 0)
+	{
+		VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+		{
+			CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		}
+		V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+
+	}
+	{
+
+		TransitionImageLayout(CommandBuffer,dst->Image, dst->ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst->ImageInfo.mipLevels, dst->ImageInfo.extent.depth);
+		TransitionImageLayout(CommandBuffer, src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src->ImageInfo.mipLevels, src->ImageInfo.extent.depth);
+
+	
+
+		
+	
+		for (uint32_t i = 0; i < dst->ImageInfo.mipLevels; i++)
+		{
+			ImageCopyStack.emplace_back(VkImageCopy());
+			bear_fill(ImageCopyStack.back());
+			ImageCopyStack.back().extent.width = dst->ImageInfo.extent.width;
+			ImageCopyStack.back().extent.height = dst->ImageInfo.extent.height;
+			ImageCopyStack.back().extent.depth = dst->ImageInfo.extent.depth;
+			ImageCopyStack.back().dstSubresource.mipLevel = i;
+			ImageCopyStack.back().srcSubresource.mipLevel = i;
+			vkCmdCopyImage(CommandBuffer, src->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1, &ImageCopyStack.back());
+		}
+		TransitionImageLayout(CommandBuffer, dst->Image, dst->ImageInfo.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst->ImageInfo.initialLayout, dst->ImageInfo.mipLevels, dst->ImageInfo.extent.depth);
+		TransitionImageLayout(CommandBuffer, src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src->ImageInfo.initialLayout, src->ImageInfo.mipLevels, src->ImageInfo.extent.depth);
+	}
+
+}
 void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Src)
 {
 	if (m_Status == 2)return;
@@ -273,9 +364,9 @@ void VKContext::SetViewport(float x, float y, float width, float height, float m
 		if (!ScissorEnable)
 		{
 			Scissor.offset.x = static_cast<int32>(Viewport.x);
-			Scissor.offset.y = static_cast<int32>(Viewport.y);
+			Scissor.offset.y = static_cast<int32>(Viewport.height) + static_cast<int32>(Viewport.y);
 			Scissor.extent.width = static_cast<uint32>(Viewport.width);
-			Scissor.extent.height = static_cast<uint32>(Viewport.height);
+			Scissor.extent.height = static_cast<uint32>(abs(Viewport.height));
 		}
 		vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
 	}
@@ -284,9 +375,9 @@ void VKContext::SetScissor(bool Enable, float x, float y, float x1, float y1)
 {
 	ScissorEnable = Enable;
 	Scissor.offset.x = static_cast<int32>(x);
-	Scissor.offset.y = static_cast<int32>(x);;
+	Scissor.offset.y = static_cast<int32>(y1) + static_cast<int32>(y);
 	Scissor.extent.width = static_cast<uint32>(x1);
-	Scissor.extent.height = static_cast<uint32>(y1);
+	Scissor.extent.height = static_cast<uint32>(abs(y1));
 	if (m_Status != 1)return;
 	if (ScissorEnable)
 	{
