@@ -145,8 +145,8 @@ VKTexture2D::VKTexture2D(bsize Width, bsize Height, BearDepthStencilFormat Forma
     ImageInfo.arrayLayers = 1;
     ImageInfo.format = Factory->Translation(DSVFormat);
     ImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ImageInfo.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    ImageInfo.usage =  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    ImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    ImageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     ImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     ImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -168,6 +168,10 @@ VKTexture2D::VKTexture2D(bsize Width, bsize Height, BearDepthStencilFormat Forma
         viewInfo.image = Image;
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format = Factory->Translation(DSVFormat);
+        viewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+        viewInfo.components.g = VK_COMPONENT_SWIZZLE_G;
+        viewInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+        viewInfo.components.a = VK_COMPONENT_SWIZZLE_A;
         switch (DSVFormat)
         {
         case DSF_DEPTH16:

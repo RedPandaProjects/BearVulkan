@@ -4,6 +4,14 @@ inline VkFormat TranslateVertexFormat(BearVertexFormat format)
 {
 	switch (format)
 	{
+	case VF_R16G16_SINT:
+		return VkFormat::VK_FORMAT_R16G16_SINT;
+	case VF_R16G16B16A16_SINT:
+		return VkFormat::VK_FORMAT_R16G16B16A16_SINT;
+	case VF_R16G16_FLOAT:
+		return VkFormat::VK_FORMAT_R16G16_SFLOAT;
+	case VF_R16G16B16A16_FLOAT:
+		return VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT;
 	case VF_R32G32B32A32_FLOAT:
 		return VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
 	case VF_R32G32B32_FLOAT:
@@ -32,6 +40,15 @@ inline bsize VertexFormatToSize(BearVertexFormat format)
 {
 	switch (format)
 	{
+	case VF_R16G16_SINT:
+		return 2 * 2;
+	case VF_R16G16B16A16_SINT:
+		return 2 * 4;
+	case VF_R16G16_FLOAT:
+		return 2 * 2;
+	case VF_R16G16B16A16_FLOAT:
+		return 2 * 4;
+
 	case VF_R32G32B32A32_FLOAT:
 		return sizeof(float) * 4;
 	case VF_R32G32B32_FLOAT:

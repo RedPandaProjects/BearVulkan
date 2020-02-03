@@ -4,7 +4,7 @@ class VKIndexBuffer :public BearRHI::BearRHIIndexBuffer
 	BEAR_CLASS_WITHOUT_COPY(VKIndexBuffer);
 public:
 	VKIndexBuffer();
-	virtual void Create(bsize Count, bool Dynamic);
+	virtual void Create(bsize Count, bool Dynamic,void*data);
 	virtual ~VKIndexBuffer();
 	virtual uint32* Lock();
 	virtual void Unlock();

@@ -253,6 +253,18 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 			rp_info.pDependencies = NULL;
 
 			V_CHK(vkCreateRenderPass(Device, &rp_info, NULL, &RenderPass));
+
+			VkFenceCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+			V_CHK(vkCreateFence(Device, &info, nullptr, &Fence));
+
+			VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+			imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+			imageAcquiredSemaphoreCreateInfo.flags = 0;
+
+			V_CHK(vkCreateSemaphore(Device, &imageAcquiredSemaphoreCreateInfo, NULL, &SemaphoreWait));
 		}
 	}
 
@@ -266,6 +278,8 @@ VKFactory::~VKFactory()
 	if (DefaultSampler) { vkDestroySampler(Device, DefaultSampler, 0); }
 	if(m_CommandPool)
 	{
+		vkDestroySemaphore(Factory->Device, SemaphoreWait, 0);
+		vkDestroyFence(Factory->Device, Fence, 0);
 		VkCommandBuffer cmd_bufs[1] = { CommandBuffer };
 		vkFreeCommandBuffers(Device, m_CommandPool, 1, cmd_bufs);
 		vkDestroyCommandPool(Device, m_CommandPool, NULL);
@@ -698,16 +712,20 @@ void VKFactory::LockCommandBuffer()
 
 void VKFactory::UnlockCommandBuffer(const VkSemaphore* pSignalSemaphores)
 {
+	static VkPipelineStageFlags StageOut = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	V_CHK(vkEndCommandBuffer(CommandBuffer));
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &CommandBuffer;
-	submitInfo.pSignalSemaphores = pSignalSemaphores;
-	submitInfo.signalSemaphoreCount = pSignalSemaphores ? 1 : 0;
-	V_CHK(vkQueueSubmit(Queue, 1, &submitInfo, VK_NULL_HANDLE));
-	V_CHK(vkQueueWaitIdle(Queue));
-
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = &SemaphoreWait;
+	submit_info.signalSemaphoreCount = pSignalSemaphores?1:0;
+	submit_info.pSignalSemaphores = pSignalSemaphores;// &buf.acquire_semaphore;
+	submit_info.pWaitDstStageMask = &StageOut;
+	submit_info.pCommandBuffers = &CommandBuffer;
+	submit_info.commandBufferCount = 1;
+	V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
+	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
+	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
 	m_CommandMutex.Unlock();
 }
 

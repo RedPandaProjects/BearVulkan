@@ -66,7 +66,7 @@ VKRenderPass::VKRenderPass(const BearRenderPassDescription& description)
 		attachments[CountRenderTarget].format = VKFactory::Translation(Description.DepthStencil.Format);
 		attachments[CountRenderTarget].samples = VK_SAMPLE_COUNT_1_BIT;
 		attachments[CountRenderTarget].loadOp = Description.DepthStencil.Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-		attachments[CountRenderTarget].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachments[CountRenderTarget].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
 		switch (Description.DepthStencil.Format)
 		{
@@ -74,7 +74,7 @@ VKRenderPass::VKRenderPass(const BearRenderPassDescription& description)
 
 		case DSF_DEPTH32F_STENCIL8:
 			attachments[CountRenderTarget].stencilLoadOp = Description.DepthStencil.Clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-			attachments[CountRenderTarget].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachments[CountRenderTarget].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 			break;
 		default:
 			attachments[CountRenderTarget].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -83,7 +83,7 @@ VKRenderPass::VKRenderPass(const BearRenderPassDescription& description)
 		}
 
 		attachments[CountRenderTarget].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachments[CountRenderTarget].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		attachments[CountRenderTarget].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		attachments[CountRenderTarget].flags = 0;
 		RenderPassCreateInfo.attachmentCount++;
 		subpass.pDepthStencilAttachment = &depth_reference;

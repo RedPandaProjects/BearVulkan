@@ -8,7 +8,7 @@ VKIndexBuffer::VKIndexBuffer()
 	IndexBufferCounter++;
 }
 
-void VKIndexBuffer::Create(bsize Count, bool Dynamic)
+void VKIndexBuffer::Create(bsize Count, bool Dynamic, void* data)
 {
 	Clear();
 	m_dynamic = Dynamic;
@@ -18,6 +18,28 @@ void VKIndexBuffer::Create(bsize Count, bool Dynamic)
 	else
 		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Count * sizeof(uint32), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Buffer, Memory);
 	Size = Count * sizeof(uint32);
+	if (data && !Dynamic)
+	{
+		VkBuffer TempBuffer;
+		VkDeviceMemory TempMemory;
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, TempBuffer, TempMemory);
+
+		uint8_t* pData;
+		V_CHK(vkMapMemory(Factory->Device, TempMemory, 0, Size, 0, (void**)&pData));
+		bear_copy(pData, data, Size);
+		vkUnmapMemory(Factory->Device, TempMemory);
+
+		Factory->LockCommandBuffer();
+		CopyBuffer(Factory->CommandBuffer, TempBuffer, Buffer, Size);
+		Factory->UnlockCommandBuffer();
+		vkDestroyBuffer(Factory->Device, Buffer, 0);
+		vkFreeMemory(Factory->Device, Memory, 0);
+	}
+	else if (data)
+	{
+		bear_copy(Lock(), data, Count * sizeof(uint32));
+		Unlock();
+	}
 }
 
 VKIndexBuffer::~VKIndexBuffer()

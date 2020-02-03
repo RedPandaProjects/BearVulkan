@@ -37,6 +37,7 @@ VKFrameBuffer::VKFrameBuffer(const BearFrameBufferDescription& description):Desc
 		FramebufferCreateInfo.width = BearMath::max(textures->ImageInfo.extent.width, FramebufferCreateInfo.width);
 		FramebufferCreateInfo.height = BearMath::max(textures->ImageInfo.extent.height, FramebufferCreateInfo.height);
 		attachments[CountRenderTarget] = textures->ImageView;
+		
 	}
 	
 	Width = FramebufferCreateInfo.width;
@@ -44,7 +45,7 @@ VKFrameBuffer::VKFrameBuffer(const BearFrameBufferDescription& description):Desc
 	FramebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	FramebufferCreateInfo.pNext = NULL;
 	FramebufferCreateInfo.renderPass = RenderPassRef->RenderPass;
-	FramebufferCreateInfo.attachmentCount = 1;
+	FramebufferCreateInfo.attachmentCount = CountRenderTarget + (Description.DepthStencil.empty()?0:1);
 	FramebufferCreateInfo.pAttachments = attachments;
 	FramebufferCreateInfo.layers = 1;
 	V_CHK( vkCreateFramebuffer(Factory->Device, &FramebufferCreateInfo, 0, &FrameBuffer));
@@ -74,7 +75,7 @@ VkRenderPassBeginInfo VKFrameBuffer::GetRenderPass()
 		ClearValues[i].color.float32[2] = RenderPassRef->Description.RenderTargets[i].Color.B32F;
 		ClearValues[i].color.float32[3] = RenderPassRef->Description.RenderTargets[i].Color.A32F;
 	}
-	if (Description.DepthStencil.empty())
+	if (!Description.DepthStencil.empty())
 	{
 		ClearValues[CountRenderTarget].depthStencil.depth = RenderPassRef->Description.DepthStencil.Depth;
 		ClearValues[CountRenderTarget].depthStencil.stencil = RenderPassRef->Description.DepthStencil.Stencil;

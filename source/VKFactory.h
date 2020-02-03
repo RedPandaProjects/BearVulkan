@@ -53,6 +53,8 @@ public:
 	uint32_t QueueFamilyIndex;
 	VkQueue Queue;
 
+	VkSemaphore SemaphoreWait;
+	VkFence Fence;
 #ifdef DEBUG
 	VkDebugUtilsMessengerEXT DebugMessenger;
 #endif

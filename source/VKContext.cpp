@@ -107,7 +107,7 @@ void VKContext::Flush(bool wait)
 		submit_info.pWaitSemaphores = &SemaphoreWait;
 		submit_info.signalSemaphoreCount = 0;
 		submit_info.pSignalSemaphores = 0;// &buf.acquire_semaphore;
-		submit_info.pWaitDstStageMask = 0;
+		submit_info.pWaitDstStageMask = m_frame_buffer .empty()?0:&stage;
 		submit_info.pCommandBuffers = &CommandBuffer;
 		submit_info.commandBufferCount = 1;
 		V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
