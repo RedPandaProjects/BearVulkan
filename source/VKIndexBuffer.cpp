@@ -32,8 +32,8 @@ void VKIndexBuffer::Create(bsize Count, bool Dynamic, void* data)
 		Factory->LockCommandBuffer();
 		CopyBuffer(Factory->CommandBuffer, TempBuffer, Buffer, Size);
 		Factory->UnlockCommandBuffer();
-		vkDestroyBuffer(Factory->Device, Buffer, 0);
-		vkFreeMemory(Factory->Device, Memory, 0);
+		vkDestroyBuffer(Factory->Device, TempBuffer, 0);
+		vkFreeMemory(Factory->Device, TempMemory, 0);
 	}
 	else if (data)
 	{

@@ -52,6 +52,8 @@ VKViewport::VKViewport(void * Handle, bsize Width_, bsize Height_, bool Fullscre
 		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 		vkCreateFence(Factory->Device, &info, nullptr, &PresentFence);
+		V_CHK(vkWaitForFences(Factory->Device, 1, &PresentFence, true, UINT64_MAX));
+		V_CHK(vkResetFences(Factory->Device, 1, &PresentFence));
 	}
 	SetFullScreen(Fullscreen);
 }
@@ -122,35 +124,6 @@ void VKViewport::Resize(bsize width, bsize height)
 	Height = height;
 }
 
-void VKViewport::Copy(BearFactoryPointer<BearRHI::BearRHITexture2D> Src)
-{
-	if (Src.empty())return;
-
-	if (static_cast<VKTexture2D*>(Src.get())->Image == 0)return;
-	auto src = static_cast<VKTexture2D*>(Src.get());
-	VkImageCopy ImageCopy = {};
-
-	if (src->ImageInfo.extent.width != Width)return;
-	if (src->ImageInfo.extent.height != Height)return;;
-	if (src->ImageInfo.extent.depth != 1)return;;
-	if (src->ImageInfo.mipLevels != 1)return;
-	Factory->LockCommandBuffer();
-	TransitionImageLayout(Factory->CommandBuffer,src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src->ImageInfo.mipLevels, src->ImageInfo.extent.depth);
-	TransitionImageLayout(Factory->CommandBuffer, SwapChainImages[FrameIndex], SwapChainImageFormat, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,1, 1);
-	ImageCopy.extent.width = src->ImageInfo.extent.width;
-	ImageCopy.extent.height = src->ImageInfo.extent.height;
-	ImageCopy.extent.depth = 1;
-	ImageCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	ImageCopy.dstSubresource.layerCount = 1;
-	ImageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	ImageCopy.srcSubresource.layerCount = 1;
-
-	vkCmdCopyImage(Factory->CommandBuffer, src->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SwapChainImages[FrameIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ImageCopy);
-	TransitionImageLayout(Factory->CommandBuffer, SwapChainImages[FrameIndex], SwapChainImageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, 1);
-	TransitionImageLayout(Factory->CommandBuffer, src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, src->ImageInfo.mipLevels, src->ImageInfo.extent.depth);
-	Factory->UnlockCommandBuffer(&Semaphore);
-	Swap();
-}
 
 
 
@@ -365,7 +338,7 @@ void VKViewport::CreateSwapChain(bsize width, bsize height, bool vsync)
 	createInfo.clipped = VK_TRUE;
 
 	createInfo.oldSwapchain = SwapChain;
-
+	
 	V_CHK(vkCreateSwapchainKHR(Factory->Device, &createInfo, nullptr, &SwapChain));
 	DestroySwapChain(createInfo.oldSwapchain);
 	V_CHK(vkGetSwapchainImagesKHR(Factory->Device, SwapChain, &imageCount, nullptr));

@@ -6,16 +6,15 @@ static const char* InstanceExtensions[] =
 	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #ifdef DEBUG
 	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+	VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif
 };
 static const char* DeviceExtensions[] =
 {
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	VK_KHR_MAINTENANCE1_EXTENSION_NAME,
 };
-static const char* ValidationLayers[] =
-{
-	"VK_LAYER_KHRONOS_validation"
-};
+
 
 #ifdef DEBUG
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
@@ -28,7 +27,21 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 	}
 }
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-	BearLog::Printf(TEXT("vulkan:" BEAR_PRINT_STR), pCallbackData->pMessage);
+	
+	switch (messageSeverity)
+	{
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+		BearLog::Printf(TEXT("VulkanWarning:" BEAR_PRINT_STR), pCallbackData->pMessage);
+		BearDebug::DebugBreak();
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+		BearLog::Printf(TEXT("VulkanError:" BEAR_PRINT_STR), pCallbackData->pMessage);
+		BEAR_RASSERT(0);
+		break;
+	default:
+		break;
+	}
+	
 	return VK_FALSE;
 }
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
@@ -41,6 +54,23 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 
 VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0), PipelineLayout(0), m_CommandPool(0),DefaultSampler(0), RenderPass(0)
 {
+	uint32_t LayerCount = 0;
+	VkLayerProperties* LayerProperties=0;
+	BearVector<const char*>  Layers;
+	{
+#ifdef DEBUG
+		vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
+		LayerProperties = bear_alloc< VkLayerProperties>(LayerCount); 
+		vkEnumerateInstanceLayerProperties(&LayerCount, LayerProperties);
+		for (bsize i = 0; i < LayerCount; i++)
+		{
+			 if (BearString::Find(LayerProperties[i].layerName, "VK_LAYER_LUNARG_standard_validation"))Layers.push_back(LayerProperties[i].layerName);
+			/*else if (BearString::Find(LayerProperties[i].layerName, "VK_LAYER_RENDERDOC_Capture"))
+				Layers.push_back(LayerProperties[i].layerName);*/
+		}
+		
+#endif
+	}
 	VkApplicationInfo app_info = {};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	app_info.pNext = NULL;
@@ -63,14 +93,16 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 	inst_info.enabledExtensionCount = sizeof(InstanceExtensions) / sizeof(const char*);
 	inst_info.ppEnabledExtensionNames = InstanceExtensions;
 #ifdef DEBUG
-	inst_info.enabledLayerCount = 0;// sizeof(ValidationLayers) / sizeof(const char*);
-	inst_info.ppEnabledLayerNames = ValidationLayers;
+	inst_info.enabledLayerCount = Layers.size();
+	inst_info.ppEnabledLayerNames = Layers.data();
+
+
 	VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo;
 	DebugCreateInfo = {};
 	DebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 	DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-		VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+		
 		VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
 	DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 		VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
@@ -84,14 +116,19 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 	VkResult res;
 
 	res = vkCreateInstance(&inst_info, NULL, &Instance);
-	if (res == VK_ERROR_INCOMPATIBLE_DRIVER) {
+	if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
+	{
+		bear_free(LayerProperties);
 		Instance = 0;
 		return;
 	}
-	else if (res) {
+	else if (res) 
+	{
+		bear_free(LayerProperties);
 		Instance = 0;
 		return;
 	}
+	if (LayerProperties)bear_free(LayerProperties);
 
 	uint32_t GpuCount = 1, QueueFamilyCount;
 	res = vkEnumeratePhysicalDevices(Instance, &GpuCount, NULL);
@@ -99,7 +136,9 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 
 	res = vkEnumeratePhysicalDevices(Instance, &GpuCount, &PhysicalDevice);
 	if (res || GpuCount == 0)return;
-
+	{
+		vkGetPhysicalDeviceFeatures(PhysicalDevice, &DeviceFeatures);
+	}
 
 	VkDeviceQueueCreateInfo queue_info = {};
 
@@ -132,13 +171,16 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 	VkDeviceCreateInfo device_info = {};
 	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	device_info.pNext = NULL;
+#ifdef DEBUG
+	//device_info.pNext = &DeviceFeatures;
+#endif
 	device_info.queueCreateInfoCount = 1;
 	device_info.pQueueCreateInfos = &queue_info;
 	device_info.enabledExtensionCount = sizeof(DeviceExtensions) / sizeof(const char*);;
 	device_info.ppEnabledExtensionNames = DeviceExtensions;
 	device_info.enabledLayerCount = 0;
 	device_info.ppEnabledLayerNames = NULL;
-	device_info.pEnabledFeatures = NULL;
+	device_info.pEnabledFeatures = &DeviceFeatures;
 
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 
@@ -149,6 +191,7 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 #ifdef DEBUG 
 		V_CHK(CreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
 #endif
+	
 		vkGetDeviceQueue(Device, QueueFamilyIndex, 0, &Queue);
 		{
 			VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {};
@@ -176,7 +219,7 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 			cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			cmd_pool_info.pNext = NULL;
 			cmd_pool_info.queueFamilyIndex = QueueFamilyIndex;
-			cmd_pool_info.flags = 0;
+			cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 			V_CHK(vkCreateCommandPool(Device, &cmd_pool_info, NULL, &m_CommandPool));
 
@@ -200,8 +243,8 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 			samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 			samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 			samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			samplerInfo.anisotropyEnable = VK_TRUE;
-			samplerInfo.maxAnisotropy = 16;
+			samplerInfo.anisotropyEnable = VK_FALSE;
+			samplerInfo.maxAnisotropy =1;
 			samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 			samplerInfo.unnormalizedCoordinates = VK_FALSE;
 			samplerInfo.compareEnable = VK_FALSE;
@@ -214,7 +257,7 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 			VkAttachmentDescription attachments[2];
 			attachments[0].format = VK_FORMAT_R8G8B8A8_UNORM;
 			attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-			attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -265,6 +308,10 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 			imageAcquiredSemaphoreCreateInfo.flags = 0;
 
 			V_CHK(vkCreateSemaphore(Device, &imageAcquiredSemaphoreCreateInfo, NULL, &SemaphoreWait));
+		}
+		{
+			V_CHK(vkWaitForFences(Device, 1, &Fence, true, UINT64_MAX));
+			V_CHK(vkResetFences(Device, 1, &Fence));
 		}
 	}
 
@@ -702,6 +749,7 @@ VkFormat VKFactory::Translation(BearDepthStencilFormat format)
 void VKFactory::LockCommandBuffer()
 {
 	m_CommandMutex.Lock();
+
 	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
 	{
 		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -712,14 +760,14 @@ void VKFactory::LockCommandBuffer()
 
 void VKFactory::UnlockCommandBuffer(const VkSemaphore* pSignalSemaphores)
 {
-	static VkPipelineStageFlags StageOut = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	static VkPipelineStageFlags StageOut = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 	V_CHK(vkEndCommandBuffer(CommandBuffer));
 	VkSubmitInfo submit_info = {};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.waitSemaphoreCount = 1;
-	submit_info.pWaitSemaphores = &SemaphoreWait;
-	submit_info.signalSemaphoreCount = pSignalSemaphores?1:0;
-	submit_info.pSignalSemaphores = pSignalSemaphores;// &buf.acquire_semaphore;
+	submit_info.waitSemaphoreCount = 0;
+	submit_info.pWaitSemaphores = 0;
+	submit_info.signalSemaphoreCount = 0;
+	submit_info.pSignalSemaphores = 0;// &buf.acquire_semaphore;
 	submit_info.pWaitDstStageMask = &StageOut;
 	submit_info.pCommandBuffers = &CommandBuffer;
 	submit_info.commandBufferCount = 1;

@@ -7,7 +7,7 @@ VKContext::VKContext():m_Status(0)
 	cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	cmd_pool_info.pNext = NULL;
 	cmd_pool_info.queueFamilyIndex = Factory->QueueFamilyIndex;
-	cmd_pool_info.flags = 0;
+	cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	V_CHK(vkCreateCommandPool(Factory->Device, &cmd_pool_info, NULL, &CommandPool));
 
@@ -25,7 +25,8 @@ VKContext::VKContext():m_Status(0)
 	info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 	V_CHK(vkCreateFence(Factory->Device, &info, nullptr, &Fence));
-
+	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
+	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
 	VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
 	imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	imageAcquiredSemaphoreCreateInfo.pNext = NULL;
@@ -71,17 +72,18 @@ void VKContext::Wait()
 
 void VKContext::Flush(bool wait)
 {
-	static VkPipelineStageFlags stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	if (!m_frame_buffer.empty())
-	{
-		auto frame_buffer = static_cast<VKFrameBuffer*>(m_frame_buffer.get());
-		frame_buffer->ToTexture(CommandBuffer);
-	}
+	static VkPipelineStageFlags stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
 
 	if (m_Status != 1)
 		return;
 	if(m_use_renderpass)
 	vkCmdEndRenderPass(CommandBuffer);
+	if (!m_frame_buffer.empty())
+	{
+		auto frame_buffer = static_cast<VKFrameBuffer*>(m_frame_buffer.get());
+		frame_buffer->ToTexture(CommandBuffer);
+	}
 	m_use_renderpass = false;
 	V_CHK(vkEndCommandBuffer(CommandBuffer));
 
@@ -90,9 +92,9 @@ void VKContext::Flush(bool wait)
 		auto viewport = static_cast<VKViewport*>(m_viewport.get());
 		VkSubmitInfo submit_info = {};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.waitSemaphoreCount = 1;
-		submit_info.pWaitSemaphores = &SemaphoreWait;
-		submit_info.signalSemaphoreCount =1;
+		submit_info.waitSemaphoreCount = 0;
+		submit_info.pWaitSemaphores = 0;
+		submit_info.signalSemaphoreCount =0;
 		submit_info.pSignalSemaphores = &viewport->Semaphore;// &buf.acquire_semaphore;
 		submit_info.pWaitDstStageMask = &stage;
 		submit_info.pCommandBuffers = &CommandBuffer;
@@ -103,11 +105,11 @@ void VKContext::Flush(bool wait)
 	{
 		VkSubmitInfo submit_info = {};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.waitSemaphoreCount = 1;
-		submit_info.pWaitSemaphores = &SemaphoreWait;
+		submit_info.waitSemaphoreCount = 0;
+		submit_info.pWaitSemaphores = 0;
 		submit_info.signalSemaphoreCount = 0;
 		submit_info.pSignalSemaphores = 0;// &buf.acquire_semaphore;
-		submit_info.pWaitDstStageMask = m_frame_buffer .empty()?0:&stage;
+		submit_info.pWaitDstStageMask = &stage;
 		submit_info.pCommandBuffers = &CommandBuffer;
 		submit_info.commandBufferCount = 1;
 		V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
@@ -361,28 +363,31 @@ void VKContext::SetViewport(float x, float y, float width, float height, float m
 
 		vkCmdSetViewport(CommandBuffer, 0, 1, &Viewport);
 
-		if (!ScissorEnable)
-		{
-			Scissor.offset.x = static_cast<int32>(Viewport.x);
-			Scissor.offset.y = static_cast<int32>(Viewport.height) + static_cast<int32>(Viewport.y);
-			Scissor.extent.width = static_cast<uint32>(Viewport.width);
-			Scissor.extent.height = static_cast<uint32>(abs(Viewport.height));
-		}
+
 		vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
 	}
 }
 void VKContext::SetScissor(bool Enable, float x, float y, float x1, float y1)
 {
 	ScissorEnable = Enable;
-	Scissor.offset.x = static_cast<int32>(x);
-	Scissor.offset.y = static_cast<int32>(y1) + static_cast<int32>(y);
-	Scissor.extent.width = static_cast<uint32>(x1);
-	Scissor.extent.height = static_cast<uint32>(abs(y1));
-	if (m_Status != 1)return;
+
 	if (ScissorEnable)
 	{
-		vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
+		Scissor.offset.x = static_cast<int32>(x);
+		Scissor.offset.y = static_cast<int32>(y);
+		Scissor.extent.width = static_cast<uint32>(x1-x);
+		Scissor.extent.height = static_cast<uint32>(y1-y);
 	}
+	else
+	{
+		Scissor.offset.x = static_cast<int32>(Viewport.x);
+		Scissor.offset.y = static_cast<int32>(Viewport.height) + static_cast<int32>(Viewport.y);
+		Scissor.extent.width = static_cast<uint32>(Viewport.width);
+		Scissor.extent.height = static_cast<uint32>(abs(Viewport.height));
+	}
+
+	if (m_Status != 1)return;
+	vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
 }
 void VKContext::Draw(bsize count, bsize offset)
 {

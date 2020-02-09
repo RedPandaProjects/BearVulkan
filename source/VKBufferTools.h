@@ -105,6 +105,13 @@ inline void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage image, 
         sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
+    else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
     else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -120,15 +127,15 @@ inline void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage image, 
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
     else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         sourceStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
     else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        barrier.dstAccessMask = 0;
+        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
         sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -145,6 +152,8 @@ inline void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage image, 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
+
+    
     else {
 		BEAR_ASSERT(false); return;
     }
@@ -162,7 +171,7 @@ inline void TransitionImageLayout(VkCommandBuffer CommandBuffer, VkImage image, 
 	Factory->UnlockCommandBuffer();
 }
 
-inline void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t mip, uint32_t depth)
+inline void CopyBufferToImage(VkCommandBuffer CommandBuffer, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t mip, uint32_t depth)
 {
 
         VkBufferImageCopy region = {};
@@ -180,14 +189,15 @@ inline void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, ui
             static_cast<uint32_t>(BearTextureUtils::GetMip(height,mip)),
             1,
         };
-
+        if (CommandBuffer == nullptr)
         Factory->LockCommandBuffer();
-        vkCmdCopyBufferToImage(Factory->CommandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        vkCmdCopyBufferToImage(CommandBuffer == nullptr ? Factory->CommandBuffer : CommandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        if (CommandBuffer == nullptr)
         Factory->UnlockCommandBuffer();
     
     
 }
-inline void CopyImageToBuffer(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t mip, uint32_t depth)
+inline void CopyImageToBuffer(VkCommandBuffer CommandBuffer, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t mip, uint32_t depth)
 {
 
     VkBufferImageCopy region = {};
@@ -205,9 +215,10 @@ inline void CopyImageToBuffer(VkBuffer buffer, VkImage image, uint32_t width, ui
             static_cast<uint32_t>(BearTextureUtils::GetMip(height,mip)),
         1,
     };
-
+    if (CommandBuffer == nullptr)
     Factory->LockCommandBuffer();
-    vkCmdCopyImageToBuffer(Factory->CommandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer, 1, &region);
+    vkCmdCopyImageToBuffer(CommandBuffer == nullptr ? Factory->CommandBuffer : CommandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, buffer, 1, &region);
+    if (CommandBuffer == nullptr)
     Factory->UnlockCommandBuffer();
 
 

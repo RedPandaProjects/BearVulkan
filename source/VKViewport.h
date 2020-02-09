@@ -8,7 +8,6 @@ public:
 	virtual void SetVSync(bool Sync);
 	virtual void SetFullScreen(bool FullScreen);
 	virtual void Resize(bsize Width, bsize Height);
-	virtual void Copy(BearFactoryPointer<BearRHI::BearRHITexture2D> Dst);
 	void Swap();
 	virtual BearRenderTargetFormat GetFormat();
 	VkSemaphore Semaphore;

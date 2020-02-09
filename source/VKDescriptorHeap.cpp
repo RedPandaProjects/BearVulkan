@@ -71,7 +71,6 @@ VKDescriptorHeap::VKDescriptorHeap(const BearDescriptorHeapDescription& Descript
 VKDescriptorHeap::~VKDescriptorHeap()
 {
 	DescriptorHeapCounter--;
-	vkFreeDescriptorSets(Factory->Device, DescriptorPool, 1, &DescriptorSet);
 
 	vkDestroyDescriptorPool(Factory->Device, DescriptorPool, 0);
 }
@@ -97,7 +96,7 @@ void VKDescriptorHeap::SetUniformBuffer(bsize slot, BearFactoryPointer<BearRHI::
 	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	WriteDescriptorSet.pBufferInfo = &buffer->BufferInfo;
 	WriteDescriptorSet.dstArrayElement = 0;
-	WriteDescriptorSet.dstBinding = static_cast<uint32_t>( slot);;
+	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(CountSRVs+ CountSamplers+ slot);;
 	vkUpdateDescriptorSets(Factory->Device, static_cast<uint32_t>(1), &WriteDescriptorSet, 0, NULL);
 }
 
@@ -116,7 +115,7 @@ void VKDescriptorHeap::SetShaderResource(bsize slot, BearFactoryPointer<BearRHI:
 	auto* buffer = const_cast<VKShaderResource*>(dynamic_cast<const VKShaderResource*>(ShaderResource.get()));
 	buffer->Set(&WriteDescriptorSet);
 	WriteDescriptorSet.dstArrayElement = 0;
-	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(CountBuffers+slot);
+	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(slot);
 	vkUpdateDescriptorSets(Factory->Device, static_cast<uint32_t>(1), &WriteDescriptorSet, 0, NULL);
 }
 
@@ -135,7 +134,7 @@ void VKDescriptorHeap::SetSampler(bsize slot, BearFactoryPointer<BearRHI::BearRH
 	auto* buffer = static_cast<const VKSamplerState*>(Sampler.get());
 
 	WriteDescriptorSet.dstArrayElement = 0;
-	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(CountSRVs+CountBuffers + slot);
+	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(CountSRVs+ slot);
 	WriteDescriptorSet.pImageInfo = &buffer->ImageInfo;
 	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 	vkUpdateDescriptorSets(Factory->Device, static_cast<uint32_t>(1), &WriteDescriptorSet, 0, NULL);

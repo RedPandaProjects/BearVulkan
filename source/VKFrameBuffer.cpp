@@ -90,7 +90,7 @@ void VKFrameBuffer::ToTexture(VkCommandBuffer Cmd)
 	for (bsize i = 0; CountRenderTarget > i; i++)
 	{
 		auto texture = static_cast<VKTexture2D*>(Description.RenderTargets[i].get());
-		TransitionImageLayout(Cmd, texture->Image, texture->ImageInfo.format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture->ImageInfo.mipLevels, texture->ImageInfo.extent.depth);
+		TransitionImageLayout(Cmd, texture->Image, texture->ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, texture->ImageInfo.mipLevels, texture->ImageInfo.extent.depth);
 	}
 }
 

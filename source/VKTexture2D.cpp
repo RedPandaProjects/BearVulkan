@@ -20,7 +20,7 @@ VKTexture2D::VKTexture2D(bsize Width, bsize Height, bsize Mips, bsize Count, Bea
         ImageInfo.arrayLayers = 1;
         ImageInfo.format = Factory->Translation(PixelFormat);
         ImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        ImageInfo.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        ImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         ImageInfo.usage =TextureUsage==TU_STATING ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT| VK_IMAGE_USAGE_TRANSFER_DST_BIT : VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         ImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         ImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -45,7 +45,7 @@ VKTexture2D::VKTexture2D(bsize Width, bsize Height, bsize Mips, bsize Count, Bea
         VkImageViewCreateInfo viewInfo = {};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image = Image;
-        viewInfo.viewType = Count>1? VK_IMAGE_VIEW_TYPE_2D: VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        viewInfo.viewType = Count>1? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format = Factory->Translation(PixelFormat);
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         viewInfo.subresourceRange.baseMipLevel = 0;
@@ -55,6 +55,7 @@ VKTexture2D::VKTexture2D(bsize Width, bsize Height, bsize Mips, bsize Count, Bea
 
         V_CHK(vkCreateImageView(Factory->Device, &viewInfo, nullptr, &ImageView));
     }
+    TransitionImageLayout(0, Image, ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
     m_buffer = 0;
     switch (TextureUsage)
     {
@@ -96,7 +97,7 @@ VKTexture2D::VKTexture2D(bsize Width, bsize Height, BearRenderTargetFormat Forma
     ImageInfo.arrayLayers = 1;
     ImageInfo.format = Factory->Translation(RTVFormat);
     ImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    ImageInfo.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    ImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     ImageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT| VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     ImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     ImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -126,6 +127,7 @@ VKTexture2D::VKTexture2D(bsize Width, bsize Height, BearRenderTargetFormat Forma
 
         V_CHK(vkCreateImageView(Factory->Device, &viewInfo, nullptr, &ImageView));
     }
+    TransitionImageLayout(0, Image, ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
 }
 
 VKTexture2D::VKTexture2D(bsize Width, bsize Height, BearDepthStencilFormat Format)
@@ -240,10 +242,11 @@ void* VKTexture2D::Lock(bsize mip, bsize depth)
     case TU_DYNAMIC:
         break;
     case TU_STATING:
-        TransitionImageLayout(0,Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
-        CopyImageToBuffer(StagingBuffer, Image, ImageInfo.extent.width, ImageInfo.extent.height, static_cast<uint32_t>(m_mip), static_cast<uint32_t>(m_depth));
-        TransitionImageLayout(0, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
-
+        Factory->LockCommandBuffer();
+        TransitionImageLayout(Factory->CommandBuffer, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
+        CopyImageToBuffer(Factory->CommandBuffer, StagingBuffer, Image, ImageInfo.extent.width, ImageInfo.extent.height, static_cast<uint32_t>(m_mip), static_cast<uint32_t>(m_depth));
+        TransitionImageLayout(Factory->CommandBuffer, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
+        Factory->UnlockCommandBuffer();
         break;
     default:
         break;
@@ -259,16 +262,19 @@ void VKTexture2D::Unlock()
     switch (TextureUsage)
     {
     case TU_STATIC:
-        TransitionImageLayout(0, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
-        CopyBufferToImage(StagingBuffer, Image, ImageInfo.extent.width, ImageInfo.extent.height, static_cast<uint32_t>(m_mip), static_cast<uint32_t>(m_depth));
-        TransitionImageLayout(0, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
+        Factory->LockCommandBuffer();
+        TransitionImageLayout(Factory->CommandBuffer, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
+        CopyBufferToImage(Factory->CommandBuffer, StagingBuffer, Image, ImageInfo.extent.width, ImageInfo.extent.height, static_cast<uint32_t>(m_mip), static_cast<uint32_t>(m_depth));
+        TransitionImageLayout(Factory->CommandBuffer, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
+        Factory->UnlockCommandBuffer();
         FreeBuffer();
         break;
     case TU_DYNAMIC:
-        TransitionImageLayout(0, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
-        CopyBufferToImage(StagingBuffer, Image, ImageInfo.extent.width, ImageInfo.extent.height, static_cast<uint32_t>(m_mip), static_cast<uint32_t>(m_depth));
-        TransitionImageLayout(0, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
-
+        Factory->LockCommandBuffer();
+        TransitionImageLayout(Factory->CommandBuffer, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
+        CopyBufferToImage(Factory->CommandBuffer, StagingBuffer, Image, ImageInfo.extent.width, ImageInfo.extent.height, static_cast<uint32_t>(m_mip), static_cast<uint32_t>(m_depth));
+        TransitionImageLayout(Factory->CommandBuffer, Image, Factory->Translation(Format), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.extent.depth);
+        Factory->UnlockCommandBuffer();
         break;
     case TU_STATING:
         break;

@@ -13,8 +13,8 @@
 #endif
 #endif
 #include "vulkan/vulkan.h"
-
-#define V_CHK(a) BEAR_ASSERT(a==VK_SUCCESS)
+extern void vk_error(VkResult result);
+#define V_CHK(a) { VkResult __result_ = a ;if(__result_!=VK_SUCCESS)vk_error(__result_); }
 #include "VKFactory.h"
 extern VKFactory* Factory;
 #include "VKViewport.h"

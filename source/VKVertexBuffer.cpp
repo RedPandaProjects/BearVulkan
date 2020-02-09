@@ -25,7 +25,7 @@ void VKVertexBuffer::Create(bsize Stride, bsize Count, bool Dynamic,void*data)
 	{
 		VkBuffer TempBuffer;
 		VkDeviceMemory TempMemory;
-		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, TempBuffer, TempMemory);
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT , VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, TempBuffer, TempMemory);
 
 		uint8_t* pData;
 		V_CHK(vkMapMemory(Factory->Device, TempMemory, 0, Size, 0, (void**)&pData));
@@ -35,8 +35,8 @@ void VKVertexBuffer::Create(bsize Stride, bsize Count, bool Dynamic,void*data)
 		Factory->LockCommandBuffer();
 		CopyBuffer(Factory->CommandBuffer, TempBuffer, Buffer, Size);
 		Factory->UnlockCommandBuffer();
-		vkDestroyBuffer(Factory->Device, Buffer, 0);
-		vkFreeMemory(Factory->Device, Memory, 0);
+		vkDestroyBuffer(Factory->Device, TempBuffer, 0);
+		vkFreeMemory(Factory->Device, TempMemory, 0);
 	}
 	else if (data)
 	{

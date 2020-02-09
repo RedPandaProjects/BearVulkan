@@ -43,6 +43,7 @@ private:
 	BearMutex m_CommandMutex;
 	VkCommandPool m_CommandPool;
 public:
+	VkPhysicalDeviceFeatures DeviceFeatures;
 	VkSampler DefaultSampler;
 	VkInstance Instance;
 	VkPhysicalDevice PhysicalDevice;

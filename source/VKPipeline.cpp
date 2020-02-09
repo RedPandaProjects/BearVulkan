@@ -118,7 +118,7 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 		VertexInputState.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		VertexInputState.pNext = NULL;
 		VertexInputState.flags = 0;
-		VertexInputState.vertexBindingDescriptionCount = 2;
+		VertexInputState.vertexBindingDescriptionCount = 1;
 		VertexInputState.pVertexBindingDescriptions = VertexInputBinding;
 		VertexInputState.vertexAttributeDescriptionCount = static_cast<uint32>(VertexInputCount); ;
 		VertexInputState.pVertexAttributeDescriptions = VertexInputAttribute;
@@ -138,8 +138,14 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 		case TT_LINE_LIST:
 			InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 			break;
+		case TT_LINE_STRIP:
+			InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+			break;
 		case TT_TRIANGLE_LIST:
 			InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			break;
+		case TT_TRIANGLE_STRIP:
+			InputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 			break;
 		default:
 			break;
@@ -191,8 +197,10 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 		}
 	
 		
-		
-		BlendState.attachmentCount = 8;
+		if (desc.RenderPass.empty())
+			BlendState.attachmentCount = 1;
+		else
+			BlendState.attachmentCount = static_cast<const VKRenderPass*>(desc.RenderPass.get())->CountRenderTarget;
 		BlendState.pAttachments = BlendAttachment;
 		BlendState.logicOpEnable = VK_FALSE;
 		BlendState.logicOp = VK_LOGIC_OP_NO_OP;

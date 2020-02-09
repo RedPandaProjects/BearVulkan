@@ -26,8 +26,8 @@ VKRenderPass::VKRenderPass(const BearRenderPassDescription& description)
 		attachments[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		attachments[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		attachments[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachments[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachments[i].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		attachments[i].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		attachments[i].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		attachments[i].flags = 0;
 		color_reference[i].attachment = static_cast<uint32_t>(i);
 		color_reference[i].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
