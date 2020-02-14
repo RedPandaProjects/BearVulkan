@@ -93,7 +93,7 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 	inst_info.enabledExtensionCount = sizeof(InstanceExtensions) / sizeof(const char*);
 	inst_info.ppEnabledExtensionNames = InstanceExtensions;
 #ifdef DEBUG
-	inst_info.enabledLayerCount = Layers.size();
+	inst_info.enabledLayerCount =static_cast<uint32_t>( Layers.size());
 	inst_info.ppEnabledLayerNames = Layers.data();
 
 

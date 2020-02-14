@@ -45,7 +45,7 @@ VKFrameBuffer::VKFrameBuffer(const BearFrameBufferDescription& description):Desc
 	FramebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	FramebufferCreateInfo.pNext = NULL;
 	FramebufferCreateInfo.renderPass = RenderPassRef->RenderPass;
-	FramebufferCreateInfo.attachmentCount = CountRenderTarget + (Description.DepthStencil.empty()?0:1);
+	FramebufferCreateInfo.attachmentCount = static_cast<uint32_t>(CountRenderTarget + (Description.DepthStencil.empty()?0:1));
 	FramebufferCreateInfo.pAttachments = attachments;
 	FramebufferCreateInfo.layers = 1;
 	V_CHK( vkCreateFramebuffer(Factory->Device, &FramebufferCreateInfo, 0, &FrameBuffer));

@@ -200,7 +200,7 @@ VKPipeline::VKPipeline(const BearPipelineDescription& desc)
 		if (desc.RenderPass.empty())
 			BlendState.attachmentCount = 1;
 		else
-			BlendState.attachmentCount = static_cast<const VKRenderPass*>(desc.RenderPass.get())->CountRenderTarget;
+			BlendState.attachmentCount =static_cast<uint32_t>( static_cast<const VKRenderPass*>(desc.RenderPass.get())->CountRenderTarget);
 		BlendState.pAttachments = BlendAttachment;
 		BlendState.logicOpEnable = VK_FALSE;
 		BlendState.logicOp = VK_LOGIC_OP_NO_OP;
