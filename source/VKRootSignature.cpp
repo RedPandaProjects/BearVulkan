@@ -33,15 +33,7 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 		bsize Offset = 0;
 		VkDescriptorSetLayoutBinding LayoutBinding[64];
 		{
-			for (bsize i = 0; i < CountBuffers; i++)
-			{
-				LayoutBinding[i + Offset].binding = static_cast<uint32_t>(i + Offset);
-				LayoutBinding[i + Offset].descriptorCount = 1;
-				LayoutBinding[i + Offset].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				LayoutBinding[i + Offset].pImmutableSamplers = nullptr;
-				LayoutBinding[i + Offset].stageFlags = TransletionShaderVisible(Description.UniformBuffers[i].Shader);
-			}
-			Offset += CountBuffers;
+
 			for (bsize i = 0; i < CountSRVs; i++)
 			{
 				LayoutBinding[i + Offset].binding = static_cast<uint32_t>(i + Offset);
@@ -58,6 +50,17 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 				LayoutBinding[i + Offset].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 				LayoutBinding[i + Offset].pImmutableSamplers = nullptr;
 				LayoutBinding[i + Offset].stageFlags = TransletionShaderVisible(Description.Samplers[i].Shader);
+			
+			}
+
+			Offset += CountSamplers;
+			for (bsize i = 0; i < CountBuffers; i++)
+			{
+				LayoutBinding[i + Offset].binding = static_cast<uint32_t>(i + Offset);
+				LayoutBinding[i + Offset].descriptorCount = 1;
+				LayoutBinding[i + Offset].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				LayoutBinding[i + Offset].pImmutableSamplers = nullptr;
+				LayoutBinding[i + Offset].stageFlags = TransletionShaderVisible(Description.UniformBuffers[i].Shader);
 			}
 		}
 
