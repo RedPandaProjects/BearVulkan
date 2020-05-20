@@ -22,7 +22,7 @@ static shaderc_include_result* CallbackIncluder(void* user_data, const char* req
 #else
 	auto stream = reinterpret_cast<BearIncluder*>(user_data)->OpenAsBuffer(requested_source);
 #endif
-
+	if (!*stream)return nullptr;
 	result->content_length = stream->Size();
 	auto data = stream->Read();
 	result->content = reinterpret_cast<char*>(*data);
