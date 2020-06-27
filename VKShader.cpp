@@ -87,7 +87,7 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearStringConteniar, 
 		BEAR_CHECK(0);
 		break;
 	};
-	shaderc_compile_options_set_include_callbacks(options, &CallbackIncluder, &CallbackInclduerRelease, reinterpret_cast<void*>(&Includer));
+	shaderc_compile_options_set_include_callbacks(options, &CallbackIncluder, &CallbackInclduerRelease, reinterpret_cast<void*>(Includer));
 	for (auto b = Defines.begin(), e = Defines.end(); b != e; b++)
 	{
 #ifdef UNICODE
