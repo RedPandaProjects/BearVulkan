@@ -64,7 +64,7 @@ VKTextureCube::VKTextureCube(size_t Width, size_t Height, size_t Mips, size_t Co
     if (data)
     {
         auto ptr = reinterpret_cast<uint8*>(data);
-        for (size_t x = 0; x < Count*6; x++)
+        for (size_t x = 0; x < Count; x++)
             for (size_t y = 0; y < Mips; y++)
             {
                 size_t  size = BearTextureUtils::GetSizeDepth(BearTextureUtils::GetMip(Width, y), BearTextureUtils::GetMip(Height, y), Format);
