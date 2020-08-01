@@ -39,7 +39,7 @@ public:
 	static VkFormat  Translation(BearRenderTargetFormat format);
 	static VkFormat  Translation(BearDepthStencilFormat format);
 	inline bool Empty()const { return Instance==0; }
-	virtual bool SupportRTX();
+	virtual bool SupportRayTracing();
 	virtual bool SupportMeshShader();
 public:
 	VkCommandBuffer CommandBuffer;

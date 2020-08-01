@@ -791,7 +791,7 @@ VkFormat VKFactory::Translation(BearDepthStencilFormat format)
 	return VK_FORMAT_D32_SFLOAT_S8_UINT;
 }
 
-bool VKFactory::SupportRTX()
+bool VKFactory::SupportRayTracing()
 {
 	return false;
 }
