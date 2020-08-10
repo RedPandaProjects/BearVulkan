@@ -17,13 +17,18 @@ public:
 	virtual BearRHI::BearRHIDescriptorHeap* CreateDescriptorHeap(const BearDescriptorHeapDescription& Description);
 	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data = 0);
 	virtual BearRHI::BearRHITextureCube* CreateTextureCube(size_t Width, size_t Height, size_t Mips, size_t Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data = 0);
-	virtual BearRHI::BearRHIStructuredBuffer* CreateStructuredBuffer(size_t size, void* data = 0);
+	virtual BearRHI::BearRHIStructuredBuffer* CreateStructuredBuffer(size_t size, void* data = 0, bool UAV = false);
 
 	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t Width, size_t Height, BearRenderTargetFormat Format);
 	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t Width, size_t Height, BearDepthStencilFormat Format);
 	virtual BearRHI::BearRHISampler* CreateSampler(const BearSamplerDescription& Description);
 	virtual BearRHI::BearRHIRenderPass* CreateRenderPass(const BearRenderPassDescription& Description);
 	virtual BearRHI::BearRHIFrameBuffer* CreateFrameBuffer(const BearFrameBufferDescription& Description);
+
+	virtual BearRHI::BearRHIPipelineRayTracing* CreatePipelineRayTracing(const BearPipelineRayTracingDescription& Description);
+	virtual BearRHI::BearRHIBottomLevel* CreateBottomLevel(const BearBottomLevelDescription& Description);
+	virtual BearRHI::BearRHITopLevel* CreateTopLevel(const BearTopLevelDescription& Description);
+	virtual BearRHI::BearRHIRayTracingShaderTable* CreateRayTracingShaderTable(const BearRayTracingShaderTableDescription& Description);
 
 	static VkSamplerAddressMode Translation(BearSamplerAddressMode format);
 	static VkCullModeFlagBits Translate(BearRasterizerCullMode format);
@@ -51,6 +56,9 @@ private:
 public:
 	VkPhysicalDeviceFeatures DeviceFeatures;
 	VkPhysicalDeviceProperties PhysicalDeviceProperties;
+#ifdef RTX
+	VkPhysicalDeviceRayTracingPropertiesNV PhysicalDeviceRayTracingProperties;
+#endif
 	VkSampler DefaultSampler;
 	VkInstance Instance;
 	VkPhysicalDevice PhysicalDevice;
@@ -66,4 +74,13 @@ public:
 	VkDebugUtilsMessengerEXT DebugMessenger;
 
 	VkRenderPass RenderPass;
+private:
+	void LoadFunctions();
+public:
+#ifdef RTX
+	IDxcCompiler3* DxcCompiler;
+	IDxcLibrary* DxcLibrary;
+#endif
 };
+
+extern VKFactory* Factory;

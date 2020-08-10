@@ -1,17 +1,32 @@
 #pragma once
-
 #include "../BearGraphics/BearRenderBase.h"
+/////////////////////////////////////
+///////////Configure/////////////////
+/////////////////////////////////////
+#ifdef VK_11
+#ifdef X64
+#define RTX
+#endif
+#endif
+/////////////////////////////////////
+/////////////////////////////////////
+/////////////////////////////////////
 #ifdef DEVELOPER_VERSION
 #ifdef RTX
 #define NV_EXTENSIONS
+#include "dxc/dxcapi.h"
 #endif
 #include "shaderc/shaderc.hpp"
 #endif
-#ifdef _WIN32
+
+#ifdef WINDOWS
 #ifndef VK_USE_PLATFORM_WIN32_KHR
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
 #endif
+
+#define VK_NO_PROTOTYPES
+
 #include "vulkan/vulkan.h"
 extern void vk_error(VkResult result);
 #define V_CHK(a) { VkResult __result_ = a ;if(__result_!=VK_SUCCESS)vk_error(__result_); }
@@ -20,11 +35,12 @@ enum EVKQuery
 {
 	VKQ_None = 0,
 	VKQ_ShaderResource,
+	VKQ_UnorderedAccess,
 	VKQ_Pipeline,
+	VKQ_RayTracingPipeline
 };
-
+#include "VKImports.h"
 #include "VKFactory.h"
-extern VKFactory* Factory;
 #include "VKViewport.h"
 #include "VKContext.h"
 #include "VKShader.h"
@@ -42,6 +58,7 @@ extern VKFactory* Factory;
 
 #include "VKSamplers.h"
 #include "VKShaderResource.h"
+#include "VKUnorderedAccess.h"
 #include "VKTexture2D.h"
 #include "VKStats.h"
 
@@ -49,3 +66,8 @@ extern VKFactory* Factory;
 #include "VKFrameBuffer.h"
 #include "VKTextureCube.h"
 #include "VKStructuredBuffer.h"
+
+#include "VKPipelineRayTracing.h"
+#include "VKBottomLevel.h"
+#include "VKTopLevel.h"
+#include "VKRayTracingShaderTable.h"

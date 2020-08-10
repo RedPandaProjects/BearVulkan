@@ -6,6 +6,21 @@ VKTexture2D::VKTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count,
     Format = PixelFormat;
     TextureUsage = typeUsage;
     TextureType = TT_Default;
+
+    switch (TextureUsage)
+    {
+    case TU_STATIC:
+    case TU_DYNAMIC:
+    case TU_STATING:
+        ImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        break;
+    case TU_STORAGE:
+        ImageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        break;
+    default:
+        break;
+    }
+    bAllowUAV = TextureUsage == TU_STORAGE;
     {
         ZeroMemory(&ImageInfo, sizeof(VkImageCreateInfo));
         ImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -18,7 +33,21 @@ VKTexture2D::VKTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count,
         ImageInfo.format = Factory->Translation(PixelFormat);
         ImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         ImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        ImageInfo.usage =TextureUsage==TU_STATING ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT| VK_IMAGE_USAGE_TRANSFER_DST_BIT : VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+        switch (TextureUsage)
+        {
+        case TU_STATING:
+            ImageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            break;
+        case TU_STORAGE:
+            ImageInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            break;
+        default:
+            ImageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+            break;
+        }
+
+        
         ImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         ImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -52,7 +81,7 @@ VKTexture2D::VKTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count,
 
         V_CHK(vkCreateImageView(Factory->Device, &viewInfo, nullptr, &ImageView));
     }
-    TransitionImageLayout(0, Image, ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels,  ImageInfo.arrayLayers,0);
+    TransitionImageLayout(0, Image, ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, ImageLayout, ImageInfo.mipLevels,  ImageInfo.arrayLayers,0);
     m_buffer = 0;
     switch (TextureUsage)
     {
@@ -63,6 +92,7 @@ VKTexture2D::VKTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count,
     }
     if (data)
     {
+        BEAR_CHECK(!bAllowUAV);
         auto ptr = reinterpret_cast<uint8*>(data);
         for (size_t x = 0; x < Count; x++)
             for (size_t y = 0; y < Mips; y++)
@@ -205,12 +235,40 @@ void VKTexture2D::SetAsSRV(VkWriteDescriptorSet* HEAP, size_t offset)
     HEAP->pImageInfo = &DescriptorImageInfo;
 }
 
+void VKTexture2D::SetAsUAV(VkWriteDescriptorSet* HEAP, size_t offset)
+{
+    BEAR_CHECK(ImageView);
+    BEAR_CHECK(bAllowUAV);
+    DescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    DescriptorImageInfo.imageView = ImageView;
+    DescriptorImageInfo.sampler = Factory->DefaultSampler;
+    HEAP->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    HEAP->pImageInfo = &DescriptorImageInfo;
+}
+
+void VKTexture2D::LockUAV(VkCommandBuffer CommandLine)
+{
+    BEAR_CHECK(ImageView);
+    BEAR_CHECK(bAllowUAV);
+    TransitionImageLayout(CommandLine, Image, ImageInfo.format, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, ImageInfo.mipLevels, ImageInfo.arrayLayers, 0);
+
+}
+
+void VKTexture2D::UnlockUAV(VkCommandBuffer CommandLine)
+{
+    BEAR_CHECK(ImageView);
+    BEAR_CHECK(bAllowUAV);
+    TransitionImageLayout(CommandLine, Image, ImageInfo.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, ImageInfo.mipLevels, ImageInfo.arrayLayers, 0);
+}
+
 void* VKTexture2D::QueryInterface(int Type)
 {
     switch (Type)
     {
     case VKQ_ShaderResource:
         return reinterpret_cast<void*>(static_cast<VKShaderResource*>(this));
+    case VKQ_UnorderedAccess:
+        return reinterpret_cast<void*>(static_cast<VKUnorderedAccess*>(this));
     default:
         return nullptr;
     }
@@ -240,8 +298,10 @@ BearTextureType VKTexture2D::GetType()
 
 void* VKTexture2D::Lock(size_t mip, size_t depth)
 {
+    BEAR_CHECK(!bAllowUAV);
     m_mip = mip;
     m_depth = depth;
+    if (bAllowUAV)return 0;
     if (TextureType != TT_Default)return 0;
     if (m_buffer)Unlock();
     switch (TextureUsage)
@@ -292,11 +352,6 @@ void VKTexture2D::Unlock()
         break;
     }
     m_buffer = 0;
-  
-    
-   
-
- 
 }
 
 void VKTexture2D::AllocBuffer()

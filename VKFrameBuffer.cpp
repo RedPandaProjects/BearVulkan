@@ -40,7 +40,6 @@ VKFrameBuffer::VKFrameBuffer(const BearFrameBufferDescription& description):Desc
 		attachments[CountRenderTarget] = textures->ImageView;
 		
 	}
-	
 	Width = FramebufferCreateInfo.width;
 	Height = FramebufferCreateInfo.height;
 	FramebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;

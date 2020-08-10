@@ -32,11 +32,13 @@ public:
 	virtual void DrawIndex(size_t count, size_t  offset_index = 0, size_t  offset_vertex = 0);
 	virtual void DispatchMesh(size_t CountX, size_t CountY, size_t CountZ);
 
+	virtual void DispatchRays(const BearDispatchRaysDescription& Description);
 	virtual void Lock(BearFactoryPointer<BearRHI::BearRHIViewport> Viewport);
 	virtual void Unlock(BearFactoryPointer<BearRHI::BearRHIViewport> Viewport);
 	virtual void Lock(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> FrameBuffer);
 	virtual void Unlock(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> FrameBuffer);
-
+	virtual void Lock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAccess);
+	virtual void Unlock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAccess);
 private:
 	bool m_UseRenderPass;
 	VkViewport Viewport;
@@ -45,4 +47,5 @@ private:
 	VkSemaphore SemaphoreWait;
 	VkFence Fence;
 
+	BearPipelineType PipelineType;
 };

@@ -6,6 +6,7 @@ extern PFN_vkCmdEndDebugUtilsLabelEXT CmdEndDebugUtilsLabelEXT;
 
 VKContext::VKContext()
 {
+	PipelineType = PT_Graphics;
 	m_UseRenderPass = false;
 	ContextCounter++;
 	VkCommandPoolCreateInfo cmd_pool_info = {};
@@ -167,10 +168,20 @@ void VKContext::SetPipeline(BearFactoryPointer<BearRHI::BearRHIPipeline> Pipelin
 	VKPipeline* P = reinterpret_cast<VKPipeline*>(Pipeline.get()->QueryInterface(VKQ_Pipeline));
 	BEAR_CHECK(P);
 	P->Set(CommandBuffer);
+	PipelineType = P->GetType();
 }
 void VKContext::SetDescriptorHeap(BearFactoryPointer<BearRHI::BearRHIDescriptorHeap> DescriptorHeap)
 {
-	static_cast<VKDescriptorHeap*>(DescriptorHeap.get())->Set(CommandBuffer);
+	switch (PipelineType)
+	{
+	case PT_RayTracing:
+		static_cast<VKDescriptorHeap*>(DescriptorHeap.get())->SetRayTracing(CommandBuffer);
+		break;
+	default:
+		static_cast<VKDescriptorHeap*>(DescriptorHeap.get())->SetGraphics(CommandBuffer);
+		break;
+	}
+
 }
 void VKContext::SetVertexBuffer(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> buffer)
 {
@@ -227,6 +238,16 @@ void VKContext::DrawIndex(size_t count, size_t  offset_index, size_t offset_vert
 
 void VKContext::DispatchMesh(size_t CountX, size_t CountY, size_t CountZ)
 {
+}
+
+void VKContext::DispatchRays(const BearDispatchRaysDescription& Description)
+{
+#ifdef RTX
+	auto* RayGenerationTable = static_cast<const VKRayTracingShaderTable*>(Description.RayGeneration.get());
+	auto* MissTable = static_cast<const VKRayTracingShaderTable*>(Description.Miss.get());
+	auto* HitGroupTable = static_cast<const VKRayTracingShaderTable*>(Description.HitGroup.get());
+	vkCmdTraceRaysNV(CommandBuffer, RayGenerationTable->Buffer, 0, MissTable->Buffer, 0, MissTable->Size, HitGroupTable->Buffer, 0, HitGroupTable->Size, VK_NULL_HANDLE, 0, 0, Description.Width, Description.Height, Description.Depth);
+#endif
 }
 
 
@@ -336,4 +357,16 @@ void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> Framebuff
 {
 	BEAR_CHECK(!Framebuffer.empty());
 	static_cast<VKFrameBuffer*>(Framebuffer.get())->Unlock(CommandBuffer);
+}
+void VKContext::Lock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAccess)
+{
+	BEAR_CHECK(!UnorderedAccess.empty());
+	VKUnorderedAccess* UAV = reinterpret_cast<VKUnorderedAccess*>(UnorderedAccess.get()->QueryInterface(VKQ_UnorderedAccess));
+	UAV->LockUAV(CommandBuffer);
+}
+void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAccess)
+{
+	BEAR_CHECK(!UnorderedAccess.empty());
+	VKUnorderedAccess* UAV = reinterpret_cast<VKUnorderedAccess*>(UnorderedAccess.get()->QueryInterface(VKQ_UnorderedAccess));
+	UAV->UnlockUAV(CommandBuffer);
 }

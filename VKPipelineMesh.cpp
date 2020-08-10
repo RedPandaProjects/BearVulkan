@@ -78,7 +78,6 @@ inline size_t VertexFormatToSize(BearVertexFormat format)
 VKPipelineMesh::VKPipelineMesh(const BearPipelineMeshDescription& desc)
 {
 	PipelineMeshCounter++;
-
 	Pipeline = 0;
 }
 

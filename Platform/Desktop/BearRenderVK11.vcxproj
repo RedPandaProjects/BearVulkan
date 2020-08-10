@@ -50,6 +50,7 @@
     <ClCompile Include="..\..\VKRootSignature.cpp" />
     <ClCompile Include="..\..\VKSamplers.cpp" />
     <ClCompile Include="..\..\VKShader.cpp" />
+    <ClCompile Include="..\..\VKShaderDXC.cpp" />
     <ClCompile Include="..\..\VKStats.cpp" />
     <ClCompile Include="..\..\VKStructuredBuffer.cpp" />
     <ClCompile Include="..\..\VKTexture2D.cpp" />
@@ -66,6 +67,7 @@
     <ClInclude Include="..\..\VKDescriptorHeap.h" />
     <ClInclude Include="..\..\VKFactory.h" />
     <ClInclude Include="..\..\VKFrameBuffer.h" />
+    <ClInclude Include="..\..\VKImports.h" />
     <ClInclude Include="..\..\VKIndexBuffer.h" />
     <ClInclude Include="..\..\VKPCH.h" />
     <ClInclude Include="..\..\VKPipeline.h" />
@@ -84,6 +86,7 @@
     <ClInclude Include="..\..\VKTextureCube.h" />
     <ClInclude Include="..\..\VKTopLevel.h" />
     <ClInclude Include="..\..\VKUniformBuffer.h" />
+    <ClInclude Include="..\..\VKUnorderedAccess.h" />
     <ClInclude Include="..\..\VKVertexBuffer.h" />
     <ClInclude Include="..\..\VKViewport.h" />
   </ItemGroup>
@@ -97,9 +100,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{FD9A3517-044C-4A74-B351-E8A9B319040B}</ProjectGuid>
+    <ProjectGuid>{DFE06BCC-18B3-47E2-9B30-DFDE434C800C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>BearRenderVK10</RootNamespace>
+    <RootNamespace>BearRenderVK11</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -200,33 +203,37 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>_DEBUG;BEARRENDERVK10_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VK_11;_DEBUG;BEARRENDERVK11_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>VKPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y</Command>
+      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>WIN32;_DEBUG;BEARRENDERVK10_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VK_11;WIN32;_DEBUG;BEARRENDERVK11_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>VKPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y</Command>
+      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -234,7 +241,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;BEARRENDERVK10_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VK_11;WIN32;NDEBUG;BEARRENDERVK11_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>VKPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -243,10 +250,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y</Command>
+      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Development|Win32'">
@@ -254,7 +263,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>DEVELOPER_VERSION;WIN32;NDEBUG;BEARRENDERVK10_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VK_11;DEVELOPER_VERSION;WIN32;NDEBUG;BEARRENDERVK11_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>VKPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -263,10 +272,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y</Command>
+      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -274,7 +285,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;BEARRENDERVK10_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VK_11;NDEBUG;BEARRENDERVK11_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>VKPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -283,10 +294,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y</Command>
+      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Development|x64'">
@@ -294,7 +307,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>DEVELOPER_VERSION;NDEBUG;BEARRENDERVK10_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>VK_11;DEVELOPER_VERSION;NDEBUG;BEARRENDERVK11_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>VKPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -303,10 +316,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y</Command>
+      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
+XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

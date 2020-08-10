@@ -11,10 +11,16 @@ static const char* DeviceExtensions[] =
 {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	VK_KHR_MAINTENANCE1_EXTENSION_NAME,
+	VK_NV_RAY_TRACING_EXTENSION_NAME,
 };
 PFN_vkCmdBeginDebugUtilsLabelEXT CmdBeginDebugUtilsLabelEXT;
 PFN_vkCmdEndDebugUtilsLabelEXT CmdEndDebugUtilsLabelEXT;
 
+
+
+
+#define REGISTRATION(name) PFN_##name name = VK_NULL_HANDLE;
+#include "VKImports.h"
 
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
@@ -52,6 +58,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 bool GDebugRender;
 VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0), PipelineLayout(0), m_CommandPool(0),DefaultSampler(0), RenderPass(0)
 {
+	LoadFunctions();
 	uint32_t LayerCount = 0;
 	VkLayerProperties* LayerProperties=0;
 	BearVector<const char*>  Layers;
@@ -69,7 +76,12 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 		vkEnumerateInstanceLayerProperties(&LayerCount, LayerProperties);
 		for (size_t i = 0; i < LayerCount; i++)
 		{
+			; ; ; 
 			 if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_standard_validation"))Layers.push_back(LayerProperties[i].layerName);
+			if (strstr(LayerProperties[i].layerName, "VK_LAYER_KHRONOS_validation"))Layers.push_back(LayerProperties[i].layerName);
+			if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_parameter_validation"))Layers.push_back(LayerProperties[i].layerName);
+			if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_object_tracker"))Layers.push_back(LayerProperties[i].layerName);
+			if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_core_validation"))Layers.push_back(LayerProperties[i].layerName);
 			/*else if (BearString::Find(LayerProperties[i].layerName, "VK_LAYER_RENDERDOC_Capture"))
 				Layers.push_back(LayerProperties[i].layerName);*/
 		}
@@ -198,6 +210,11 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 	if (res != VK_SUCCESS) { Device = 0; }
 	else
 	{
+		{
+#define REGISTRATION_DEVICE(name)name = (PFN_##name)vkGetDeviceProcAddr(Device,#name);BEAR_CHECK(name);
+#define REGISTRATION(name)
+#include "VKImports.h"
+		}
 		if (GDebugRender)
 		{
 			V_CHK(CreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
@@ -327,6 +344,17 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 		{
 			vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
 		}
+		{
+#ifdef RTX
+			VkPhysicalDeviceProperties2 Properties;
+			bear_fill(PhysicalDeviceRayTracingProperties);
+			PhysicalDeviceRayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
+			PhysicalDeviceRayTracingProperties.pNext = VK_NULL_HANDLE;
+			Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+			Properties.pNext = &PhysicalDeviceRayTracingProperties;
+			vkGetPhysicalDeviceProperties2(PhysicalDevice, &Properties);
+#endif
+		}
 		if (GDebugRender)
 		{
 			CmdBeginDebugUtilsLabelEXT =
@@ -339,12 +367,22 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 					"vkCmdEndDebugUtilsLabelEXT");
 
 		}
+#ifdef RTX
+		BEAR_ASSERT(SUCCEEDED( DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&DxcCompiler))));
+		BEAR_ASSERT(SUCCEEDED(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&DxcLibrary))));
+#endif
 	}
 
 }
 
 VKFactory::~VKFactory()
 {
+	{
+#ifdef RTX
+		DxcCompiler->Release();
+		DxcLibrary->Release();
+#endif
+	}
 	if (RenderPass) {
 		vkDestroyRenderPass(Device, RenderPass, 0);
 	}
@@ -407,9 +445,44 @@ BearRHI::BearRHIPipelineMesh* VKFactory::CreatePipelineMesh(const BearPipelineMe
 	return bear_new<VKPipelineMesh>(Description);
 }
 
+BearRHI::BearRHIPipelineRayTracing* VKFactory::CreatePipelineRayTracing(const BearPipelineRayTracingDescription& Description)
+{
+#ifdef RTX
+	return bear_new<VKPipelineRayTracing>(Description);
+#else 
+	return nullptr;
+#endif
+}
+
+BearRHI::BearRHIBottomLevel* VKFactory::CreateBottomLevel(const BearBottomLevelDescription& Description)
+{
+#ifdef RTX
+	return bear_new<VKBottomLevel>(Description);
+#else 
+	return nullptr;
+#endif
+}
+
+BearRHI::BearRHITopLevel* VKFactory::CreateTopLevel(const BearTopLevelDescription& Description)
+{
+#ifdef RTX
+	return bear_new<VKTopLevel>(Description);
+#else 
+	return nullptr;
+#endif
+}
+
+BearRHI::BearRHIRayTracingShaderTable* VKFactory::CreateRayTracingShaderTable(const BearRayTracingShaderTableDescription& Description)
+{
+#ifdef RTX
+	return bear_new<VKRayTracingShaderTable>(Description);
+#else 
+	return nullptr;
+#endif
+}
+
 BearRHI::BearRHIUniformBuffer* VKFactory::CreateUniformBuffer(size_t Stride, size_t Count, bool Dynamic)
 {
-
 	return bear_new<VKUniformBuffer>(Stride, Count, Dynamic);
 }
 
@@ -434,9 +507,9 @@ BearRHI::BearRHITextureCube* VKFactory::CreateTextureCube(size_t Width, size_t H
 	return bear_new<VKTextureCube>(Width, Height, Mips, Count, PixelFormat, TypeUsage, data);
 }
 
-BearRHI::BearRHIStructuredBuffer* VKFactory::CreateStructuredBuffer(size_t size, void* data)
+BearRHI::BearRHIStructuredBuffer* VKFactory::CreateStructuredBuffer(size_t size, void* data, bool UAV)
 {
-	return bear_new<VKStructuredBuffer>(size, data);
+	return bear_new<VKStructuredBuffer>(size, data, UAV);
 }
 
 BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t Width, size_t Height, BearRenderTargetFormat Format)
@@ -830,5 +903,12 @@ void VKFactory::UnlockCommandBuffer(const VkSemaphore* pSignalSemaphores)
 	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
 	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
 	m_CommandMutex.Unlock();
+}
+
+void VKFactory::LoadFunctions()
+{
+#define REGISTRATION_DEVICE(name)
+#define REGISTRATION(name)  name = BearManagerDynamicLibraries::GetFunctionInProject<PFN_##name>(TEXT("vulkan-1"),#name);BEAR_CHECK(name);
+#include "VKImports.h"
 }
 

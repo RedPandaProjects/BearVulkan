@@ -37,8 +37,7 @@ static void CallbackInclduerRelease(void* user_data, shaderc_include_result* inc
 	bear_free(include_result);
 }
 extern bool GDebugRender;
-
-bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer)
+bool VKShader::LoadAsTextShaderc(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer)
 {
 	shaderc_compiler_t compiler = shaderc_compiler_initialize();
 	shaderc_compile_options_t options = shaderc_compile_options_initialize();
@@ -51,7 +50,11 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearStringConteniar, 
 	shaderc_compile_options_set_target_env(options, shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
 	shaderc_compile_options_set_target_spirv(options, shaderc_spirv_version_1_0);
 #endif
+#ifdef VK_11
+	shaderc_compile_options_set_forced_version_profile(options, 460, shaderc_profile_core);
+#else
 	shaderc_compile_options_set_forced_version_profile(options, 450, shaderc_profile_core);
+#endif
 	if (GDebugRender)
 	{
 		shaderc_compile_options_set_optimization_level(options, shaderc_optimization_level_zero);
@@ -98,9 +101,11 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearStringConteniar, 
 #endif
 	}
 #ifdef UNICODE
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(Text), BearString::GetSize(Text), shader_kind, "noname", "main", options);
+	EntryPointName = *BearEncoding::FastToAnsi(EntryPoint);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(Text), BearString::GetSize(Text), shader_kind, "noname", *BearEncoding::FastToAnsi(EntryPoint), options);
 #else
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, Text, strlen(Text), shader_kind, "noname", "main", options);
+	EntryPointName = EntryPoint;
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, Text, strlen(Text), shader_kind, "noname", EntryPoint, options);
 #endif
 
 	if (shaderc_result_get_compilation_status(result) == shaderc_compilation_status_compilation_error)
@@ -114,7 +119,7 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearStringConteniar, 
 		shaderc_compile_options_release(options);
 		shaderc_result_release(result);
 		shaderc_compiler_release(compiler);
-		
+
 		return false;
 	}
 	if (shaderc_result_get_num_warnings(result))
@@ -143,6 +148,30 @@ bool VKShader::LoadAsText(const bchar* Text, const BearMap<BearStringConteniar, 
 
 	return true;
 }
+bool VKShader::LoadAsText(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer)
+{
+	switch (Type)
+	{
+	case ST_Mesh:
+		break;
+	case ST_Amplification:
+		break;
+#ifdef RTX
+	case ST_RayGeneration:
+	case ST_Miss:
+	case ST_Callable:
+	case ST_Intersection:
+	case ST_ClosestHit:
+	case ST_AnyHit:
+		return LoadAsTextDXC(Text, EntryPoint, Defines, OutError, Includer);
+#endif
+	default:
+		return LoadAsTextShaderc(Text, EntryPoint, Defines, OutError, Includer);
+		break;
+	}
+}
+
+
 
 void* VKShader::GetPointer()
 {
@@ -180,12 +209,44 @@ void VKShader::CreateShader()
 	case ST_Pixel:
 		Shader.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		break;
+	case ST_Hull:
+		Shader.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+		break;
+	case ST_Domain:
+		Shader.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+		break;
+	case ST_Geometry:
+		Shader.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+		break;
+	case ST_Compute:
+		Shader.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+		break;
+#ifdef RTX
+	case ST_RayGeneration:
+		Shader.stage = VK_SHADER_STAGE_RAYGEN_BIT_NV;
+		break;
+	case ST_Miss:
+		Shader.stage = VK_SHADER_STAGE_MISS_BIT_NV;
+		break;
+	case ST_Callable:
+		Shader.stage = VK_SHADER_STAGE_CALLABLE_BIT_NV;
+		break;
+	case ST_Intersection:
+		Shader.stage = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+		break;
+	case ST_AnyHit:
+		Shader.stage = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+		break;
+	case ST_ClosestHit:
+		Shader.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+		break;
+#endif
 	default:
-		Shader.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		BEAR_ASSERT(0);
 		break;
 	}
 
-	Shader.pName = "main";
+	Shader.pName = *EntryPointName;
 
 	VkShaderModuleCreateInfo moduleCreateInfo;
 	moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

@@ -1,6 +1,6 @@
 #include "VKPCH.h"
 size_t StructuredBufferCounter = 0;
-VKStructuredBuffer::VKStructuredBuffer(size_t size, void* Data):Size(size)
+VKStructuredBuffer::VKStructuredBuffer(size_t size, void* Data, bool UAV):Size(size)
 {
     StructuredBufferCounter++;
     CreateBuffer(Factory->PhysicalDevice, Factory->Device, Size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Buffer, Memory);
@@ -54,7 +54,26 @@ void* VKStructuredBuffer::QueryInterface(int Type)
     {
     case VKQ_ShaderResource:
         return reinterpret_cast<void*>(static_cast<VKShaderResource*>(this));
+    case VKQ_UnorderedAccess:
+        return reinterpret_cast<void*>(static_cast<VKShaderResource*>(this));
     default:
         return nullptr;
     }
+}
+
+void VKStructuredBuffer::SetAsUAV(VkWriteDescriptorSet* HEAP, size_t offset)
+{
+    HEAP->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    BufferInfo.buffer = Buffer;
+    BufferInfo.offset = offset;
+    BufferInfo.range = Size - offset;
+    HEAP->pBufferInfo = &BufferInfo;
+}
+
+void VKStructuredBuffer::LockUAV(VkCommandBuffer CommandLine)
+{
+}
+
+void VKStructuredBuffer::UnlockUAV(VkCommandBuffer CommandLine)
+{
 }

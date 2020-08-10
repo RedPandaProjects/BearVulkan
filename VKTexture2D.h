@@ -1,5 +1,5 @@
 #pragma once
-class VKTexture2D : public VKShaderResource, public BearRHI::BearRHITexture2D
+class VKTexture2D : public VKUnorderedAccess, public BearRHI::BearRHITexture2D
 {
 public:
 	VKTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data = 0);
@@ -10,9 +10,13 @@ public:
 	VkImageView ImageView;
 	VkDescriptorImageInfo DescriptorImageInfo;
 	VkImageCreateInfo ImageInfo;
+	VkImageLayout ImageLayout;
 	virtual ~VKTexture2D();
 public:
 	virtual void SetAsSRV(VkWriteDescriptorSet* HEAP, size_t offset);
+	virtual void SetAsUAV(VkWriteDescriptorSet* HEAP, size_t offset);
+	virtual void LockUAV(VkCommandBuffer  CommandLine);
+	virtual void UnlockUAV(VkCommandBuffer  CommandLine);
 	virtual void*QueryInterface(int Type);
 	virtual BearTextureType GetType();
 	virtual void* Lock(size_t mip, size_t depth);

@@ -78,7 +78,7 @@ inline size_t VertexFormatToSize(BearVertexFormat format)
 VKPipelineGraphics::VKPipelineGraphics(const BearPipelineGraphicsDescription& desc)
 {
 	PipelineGraphicsCounter++;
-	VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+	VkDynamicState dynamicStateEnables[16];
 	VkPipelineDynamicStateCreateInfo DynamicState = {};
 	{
 		memset(dynamicStateEnables, 0, sizeof(dynamicStateEnables));

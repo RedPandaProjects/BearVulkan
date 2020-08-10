@@ -6,8 +6,13 @@ public:
 	VKShader(BearShaderType type);
 	virtual ~VKShader();
 #ifdef DEVELOPER_VERSION	
-	virtual bool LoadAsText(const bchar* Text, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer);
-
+	virtual bool LoadAsText(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer);
+private:
+	virtual bool LoadAsTextShaderc(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer);
+#ifdef RTX
+	virtual bool LoadAsTextDXC(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer);
+#endif
+public:
 	virtual void* GetPointer();
 	virtual	size_t GetSize();
 #endif
@@ -18,4 +23,5 @@ public:
 private:
 	void CreateShader();
 	BearShaderType Type;
+	BearStringConteniarAnsi EntryPointName;
 };
