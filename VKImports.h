@@ -4,6 +4,12 @@
 #ifndef REGISTRATION_DEVICE
 #define REGISTRATION_DEVICE(name) REGISTRATION(name)
 #endif
+
+#ifndef REGISTRATION_INSTANCE
+#define REGISTRATION_INSTANCE(name) REGISTRATION(name)
+#endif
+REGISTRATION(vkEnumerateDeviceExtensionProperties);
+REGISTRATION(vkEnumerateInstanceExtensionProperties);
 REGISTRATION(vkGetInstanceProcAddr);
 REGISTRATION(vkEnumerateInstanceLayerProperties);
 REGISTRATION(vkDestroyRenderPass);
@@ -92,6 +98,12 @@ REGISTRATION(vkDeviceWaitIdle)
 REGISTRATION(vkGetSwapchainImagesKHR)
 REGISTRATION(vkCreateShaderModule)
 REGISTRATION(vkGetDeviceProcAddr)
+#ifdef DEVELOPER_VERSION
+REGISTRATION_INSTANCE(vkDestroyDebugUtilsMessengerEXT)
+REGISTRATION_INSTANCE(vkCmdBeginDebugUtilsLabelEXT);
+REGISTRATION_INSTANCE(vkCmdEndDebugUtilsLabelEXT);
+REGISTRATION_INSTANCE(vkCreateDebugUtilsMessengerEXT)
+#endif
 #ifdef RTX
 REGISTRATION(vkGetPhysicalDeviceProperties2)
 REGISTRATION_DEVICE(vkCmdBuildAccelerationStructureNV)

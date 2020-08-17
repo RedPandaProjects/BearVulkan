@@ -1,238 +1,332 @@
 #include "VKPCH.h"
-static const char* InstanceExtensions[] =
+#ifdef DEVELOPER_VERSION
+bool GDebugRender;
+static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type, const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void*) 
 {
 
-	VK_KHR_SURFACE_EXTENSION_NAME,
-	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-	VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-};
-static const char* DeviceExtensions[] =
-{
-	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-	VK_NV_RAY_TRACING_EXTENSION_NAME,
-};
-PFN_vkCmdBeginDebugUtilsLabelEXT CmdBeginDebugUtilsLabelEXT;
-PFN_vkCmdEndDebugUtilsLabelEXT CmdEndDebugUtilsLabelEXT;
-
-
-
-
-#define REGISTRATION(name) PFN_##name name = VK_NULL_HANDLE;
-#include "VKImports.h"
-
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
-	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-	if (func != nullptr) {
-		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-	}
-	else {
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-	}
-}
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-	
-	switch (messageSeverity)
+	switch (message_severity)
 	{
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-		BEAR_PRINTF(TEXT("VulkanWarning:" BEAR_PRINT_STR_CURRENT), pCallbackData->pMessage);
+		BEAR_PRINTF(TEXT("VulkanWarning:" BEAR_PRINT_STR_CURRENT), callback_data->pMessage);
 		DebugBreak();
 		break;
 	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-		BEAR_PRINTF(TEXT("VulkanError:" BEAR_PRINT_STR_CURRENT), pCallbackData->pMessage);
+		BEAR_PRINTF(TEXT("VulkanError:" BEAR_PRINT_STR_CURRENT), callback_data->pMessage);
 		BEAR_ASSERT(0);
 		break;
 	default:
 		break;
 	}
-	
 	return VK_FALSE;
 }
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
-	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr) {
-		func(instance, debugMessenger, pAllocator);
-	}
-}
-bool GDebugRender;
-VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCacheDefault(0), PipelineLayout(0), m_CommandPool(0),DefaultSampler(0), RenderPass(0)
-{
-	LoadFunctions();
-	uint32_t LayerCount = 0;
-	VkLayerProperties* LayerProperties=0;
-	BearVector<const char*>  Layers;
-
-	GDebugRender = BearString::Find(GetCommandLine(), TEXT("-debugrender"));
-	if (!GDebugRender)
-		GDebugRender = BearString::Find(GetCommandLine(), TEXT("-drender"));
-#if defined(_DEBUG)
-	GDebugRender = true;
 #endif
+
+bool VKFactory::LoadFunctions()
+{
+#define REGISTRATION_INSTANCE(name) 
+#define REGISTRATION_DEVICE(name)
+#define REGISTRATION(name)  name = BearManagerDynamicLibraries::GetFunctionInProject<PFN_##name>(TEXT("vulkan-1"),#name);if(!name)return false;
+#include "VKImports.h"
+	return true;
+}
+
+bool VKFactory::CreateInstance()
+{
+	VkApplicationInfo ApplicationInfo = {};
+	ApplicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	ApplicationInfo.pNext = NULL;
+	ApplicationInfo.pApplicationName = "BearEngine";
+	ApplicationInfo.applicationVersion = 1;
+	ApplicationInfo.pEngineName = "BearGraphics";
+	ApplicationInfo.engineVersion = 1;
+#ifdef VK_11
+	ApplicationInfo.apiVersion = VK_MAKE_VERSION(1, 1, 0);
+#else
+	ApplicationInfo.apiVersion = VK_API_VERSION_1_0;
+#endif
+	BearVector<const char*>InstanceExtensions;
+	InstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+	InstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#ifdef DEVELOPER_VERSION
+	InstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	InstanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif
+
+	VkInstanceCreateInfo InstanceCreateInfo = {};
+	InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	InstanceCreateInfo.pNext = NULL;
+	InstanceCreateInfo.flags = 0;
+	InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
+	InstanceCreateInfo.enabledExtensionCount = InstanceExtensions.size();
+	InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.data();
+
+#ifdef DEVELOPER_VERSION
+	BearVector<const char*>  Layers;
+	VkLayerProperties* LayerProperties = nullptr;
 	if (GDebugRender)
 	{
-		vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
-		LayerProperties = bear_alloc< VkLayerProperties>(LayerCount); 
-		vkEnumerateInstanceLayerProperties(&LayerCount, LayerProperties);
-		for (size_t i = 0; i < LayerCount; i++)
 		{
-			; ; ; 
-			 if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_standard_validation"))Layers.push_back(LayerProperties[i].layerName);
-			if (strstr(LayerProperties[i].layerName, "VK_LAYER_KHRONOS_validation"))Layers.push_back(LayerProperties[i].layerName);
-			if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_parameter_validation"))Layers.push_back(LayerProperties[i].layerName);
-			if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_object_tracker"))Layers.push_back(LayerProperties[i].layerName);
-			if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_core_validation"))Layers.push_back(LayerProperties[i].layerName);
-			/*else if (BearString::Find(LayerProperties[i].layerName, "VK_LAYER_RENDERDOC_Capture"))
-				Layers.push_back(LayerProperties[i].layerName);*/
+			uint32_t LayerCount = 0;
+			vkEnumerateInstanceLayerProperties(&LayerCount, nullptr);
+			LayerProperties = bear_alloc< VkLayerProperties>(LayerCount);
+			vkEnumerateInstanceLayerProperties(&LayerCount, LayerProperties);
+			for (size_t i = 0; i < LayerCount; i++)
+			{
+
+				if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_standard_validation"))Layers.push_back(LayerProperties[i].layerName);
+				if (strstr(LayerProperties[i].layerName, "VK_LAYER_KHRONOS_validation"))Layers.push_back(LayerProperties[i].layerName);
+				if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_parameter_validation"))Layers.push_back(LayerProperties[i].layerName);
+				if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_object_tracker"))Layers.push_back(LayerProperties[i].layerName);
+				if (strstr(LayerProperties[i].layerName, "VK_LAYER_LUNARG_core_validation"))Layers.push_back(LayerProperties[i].layerName);
+				/*else if (BearString::Find(LayerProperties[i].layerName, "VK_LAYER_RENDERDOC_Capture"))
+					Layers.push_back(LayerProperties[i].layerName);*/
+			}
 		}
 		
-	}
-	VkApplicationInfo app_info = {};
-	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	app_info.pNext = NULL;
-	app_info.pApplicationName = "BearProgram";
-	app_info.applicationVersion = 1;
-	app_info.pEngineName = "BearGraphics";
-	app_info.engineVersion = 1;
-#ifdef VK_11
-	app_info.apiVersion = VK_MAKE_VERSION(1, 1, 0);
-#else
-	app_info.apiVersion = VK_API_VERSION_1_0;
-	
-#endif
-	// initialize the VkInstanceCreateInfo structure
-	VkInstanceCreateInfo inst_info = {};
-	inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	inst_info.pNext = NULL;
-	inst_info.flags = 0;
-	inst_info.pApplicationInfo = &app_info;
-	inst_info.enabledExtensionCount = sizeof(InstanceExtensions) / sizeof(const char*);
-	inst_info.ppEnabledExtensionNames = InstanceExtensions;
-	VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo;
-	if (GDebugRender)
-	{
-		
-		inst_info.enabledLayerCount = static_cast<uint32_t>(Layers.size());
-		inst_info.ppEnabledLayerNames = Layers.data();
+		InstanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(Layers.size());
+		InstanceCreateInfo.ppEnabledLayerNames = Layers.data();
 
-
-	
+		VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo;
 		DebugCreateInfo = {};
 		DebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
-		DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-			VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-			VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-		DebugCreateInfo.pfnUserCallback = debugCallback;
-		inst_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugCreateInfo;
+		DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |	VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+		DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |	VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |	VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+		DebugCreateInfo.pfnUserCallback = DebugCallback;
+		InstanceCreateInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&DebugCreateInfo;
 	}
-	else
-	{
-		inst_info.enabledExtensionCount -= 2;
-		inst_info.enabledLayerCount = 0;
-		inst_info.ppEnabledLayerNames = 0;
-	}
-	VkResult res;
-
-	res = vkCreateInstance(&inst_info, NULL, &Instance);
-	if (res == VK_ERROR_INCOMPATIBLE_DRIVER)
-	{
-		bear_free(LayerProperties);
-		Instance = 0;
-		return;
-	}
-	else if (res) 
-	{
-		bear_free(LayerProperties);
-		Instance = 0;
-		return;
-	}
-	if (LayerProperties)bear_free(LayerProperties);
-
-	uint32_t GpuCount = 1, QueueFamilyCount;
-	res = vkEnumeratePhysicalDevices(Instance, &GpuCount, NULL);
-	if (GpuCount == 0)return;
-
-	res = vkEnumeratePhysicalDevices(Instance, &GpuCount, &PhysicalDevice);
-	if (res || GpuCount == 0)return;
-	{
-		vkGetPhysicalDeviceFeatures(PhysicalDevice, &DeviceFeatures);
-	}
-
-	VkDeviceQueueCreateInfo queue_info = {};
-
-	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, NULL);
-	if (!QueueFamilyCount)return;
-
-	BearVector< VkQueueFamilyProperties> QueueProps;
-	QueueProps.resize(QueueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyCount, &QueueProps[0]);
-	if (QueueFamilyCount < 0)return;
-
-	bool found = false;
-	for (uint32_t i = 0; i < QueueFamilyCount; i++)
-	{
-		if (QueueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-		{
-			queue_info.queueFamilyIndex = i;
-			found = true;
-			break;
-		}
-	}
-	if (!found)return;
-	QueueFamilyIndex = queue_info.queueFamilyIndex;
-	float queue_priorities[1] = { 0.0 };
-	queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queue_info.pNext = NULL;
-	queue_info.queueCount = 1;
-	queue_info.pQueuePriorities = queue_priorities;
-
-	VkDeviceCreateInfo device_info = {};
-	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	device_info.pNext = NULL;
-#ifdef DEBUG
-	//device_info.pNext = &DeviceFeatures;
 #endif
-	device_info.queueCreateInfoCount = 1;
-	device_info.pQueueCreateInfos = &queue_info;
-	device_info.enabledExtensionCount = sizeof(DeviceExtensions) / sizeof(const char*);;
-	device_info.ppEnabledExtensionNames = DeviceExtensions;
-	device_info.enabledLayerCount = 0;
-	device_info.ppEnabledLayerNames = NULL;
-	device_info.pEnabledFeatures = &DeviceFeatures;
 
-	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+	VkResult Result = VK_SUCCESS;
 
-	res = vkCreateDevice(PhysicalDevice, &device_info, NULL, &Device);
-	if (res != VK_SUCCESS) { Device = 0; }
-	else
+	Result = vkCreateInstance(&InstanceCreateInfo, NULL, &Instance);
+
+#ifdef DEVELOPER_VERSION
+	if (LayerProperties)
 	{
+		bear_free(LayerProperties);
+	}
+#endif
+
+	if (Result == VK_ERROR_INCOMPATIBLE_DRIVER)
+	{
+		Instance = 0;
+		return false;
+	}
+	else if (Result)
+	{
+		Instance = 0;
+		return false;
+	}
+
+
+	{
+#define REGISTRATION_DEVICE(name)
+#define REGISTRATION(name)
+#define REGISTRATION_INSTANCE(name) name = (PFN_##name)vkGetInstanceProcAddr(Instance,#name);BEAR_CHECK(name);
+#include "VKImports.h"
+	}
+
+	return true;
+}
+
+bool VKFactory::CreateDevice()
+{
+	VkResult Result = VK_SUCCESS;
+	VkDeviceQueueCreateInfo QueueCreateInfo = {};
+	if (!CreateGPU(QueueCreateInfo.queueFamilyIndex))
+		return false;
+	static float QueuePriorities[] = { 0 };
+	QueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	QueueCreateInfo.pNext = NULL;
+	QueueCreateInfo.queueCount = 1;
+	QueueCreateInfo.pQueuePriorities = QueuePriorities;
+	BearVector<const char*> DeviceExtensions;
+	{
+		
+		BearVector<VkExtensionProperties> AvailableExtensions;
+
+		auto FindExtensionProperty = [&AvailableExtensions](const char* name)->bool {for (auto& i : AvailableExtensions) { if (BearString::Compare(i.extensionName, name) == 0)return true; }return false; };
 		{
+			uint32_t ExtensionCount = 0;
+			Result = vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, nullptr);
+			if (Result != VK_SUCCESS)return false;
+			AvailableExtensions.resize(0);
+			Result = vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
+			if (Result != VK_SUCCESS)return false;
+		}
+		if (!FindExtensionProperty(VK_KHR_SWAPCHAIN_EXTENSION_NAME))return false;
+		DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+		if (!FindExtensionProperty(VK_KHR_MAINTENANCE1_EXTENSION_NAME))return false;
+		DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+#ifdef RTX
+		if (FindExtensionProperty(VK_NV_RAY_TRACING_EXTENSION_NAME))
+		{
+			DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+			bSupportRayTracing = true;
+		}
+#endif
+	}
+	
+
+
+	VkDeviceCreateInfo DeviceCreateInfo = {};
+	DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	DeviceCreateInfo.pNext = NULL;
+	DeviceCreateInfo.queueCreateInfoCount = 1;
+	DeviceCreateInfo.pQueueCreateInfos = &QueueCreateInfo;
+	DeviceCreateInfo.enabledExtensionCount = DeviceExtensions.size();
+	DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.data();
+	DeviceCreateInfo.enabledLayerCount = 0;
+	DeviceCreateInfo.ppEnabledLayerNames = NULL;
+	DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
+
+	Result = vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, NULL, &Device);
+	if (Result != VK_SUCCESS) 
+	{ 
+		Device = 0;
+		return false;
+	}
+
+	{
 #define REGISTRATION_DEVICE(name)name = (PFN_##name)vkGetDeviceProcAddr(Device,#name);BEAR_CHECK(name);
 #define REGISTRATION(name)
+#define REGISTRATION_INSTANCE(name) 
 #include "VKImports.h"
-		}
-		if (GDebugRender)
-		{
-			V_CHK(CreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
-		}
-	
+	}
+#ifdef DEVELOPER_VERSION
+	if (GDebugRender)
+	{
+		VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo;
+		DebugCreateInfo = {};
+		DebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+		DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+		DebugCreateInfo.pfnUserCallback = DebugCallback;
+		V_CHK(vkCreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
+	}
+#endif
+	{
 		vkGetDeviceQueue(Device, QueueFamilyIndex, 0, &Queue);
-		{
-			VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {};
-			PipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-			PipelineLayoutCreateInfo.pNext = NULL;
-			PipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-			PipelineLayoutCreateInfo.pPushConstantRanges = NULL;
-			PipelineLayoutCreateInfo.setLayoutCount = 0;
-			PipelineLayoutCreateInfo.pSetLayouts = 0;
+	}
 
-			V_CHK(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, NULL, &PipelineLayout));
-		}
+	return true;
+}
+
+bool VKFactory::CreateGPU(uint32_t& queue_family_index)
+{
+	VkResult Result = VK_SUCCESS;
+
+	BearVector<VkPhysicalDevice> PhysicalDevices;
+	{
+		uint32_t GpuCount = 0;
+
+		Result = vkEnumeratePhysicalDevices(Instance, &GpuCount, NULL);
+		if (Result != VK_SUCCESS)return false;
+		if (GpuCount == 0)return;
+
+		PhysicalDevices.resize(GpuCount);
+
+		Result = vkEnumeratePhysicalDevices(Instance, &GpuCount, PhysicalDevices.data());
+		if (Result != VK_SUCCESS)return false;
+	}
+
+	for (VkPhysicalDevice i : PhysicalDevices)
+	{
+		VkPhysicalDeviceProperties Properties = {};
+		vkGetPhysicalDeviceProperties(i, &Properties);
+
+		if (Properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)continue;
+
+
+
+		BearVector< VkQueueFamilyProperties> QueueProps;
 		{
+			uint32_t QueueFamilyCount = 0;
+
+			vkGetPhysicalDeviceQueueFamilyProperties(i, &QueueFamilyCount, NULL);
+			if (!QueueFamilyCount)continue;
+
+			QueueProps.resize(QueueFamilyCount);
+
+			vkGetPhysicalDeviceQueueFamilyProperties(i, &QueueFamilyCount, QueueProps.data());
+			if (QueueFamilyCount < 0)continue;
+		}
+
+		for (bsize a=0; a< QueueProps.size() ;a++)
+		{
+			if (QueueProps[a].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			{
+				PhysicalDevice = i;
+				queue_family_index = a;
+
+				vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
+				vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+				vkGetPhysicalDeviceFeatures(PhysicalDevice, &DeviceFeatures);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), m_CommandPool(0)
+{
+	LoadFunctions();
+#ifdef DEVELOPER_VERSION
+	{
+		GDebugRender = BearString::Find(GetCommandLine(), TEXT("-debugrender"));
+		if (!GDebugRender)
+			GDebugRender = BearString::Find(GetCommandLine(), TEXT("-drender"));
+#if defined(_DEBUG)
+		GDebugRender = true;
+#endif
+	}
+#endif
+	if (!CreateInstance())return;
+	if (!CreateDevice())return;
+
+	{
+		VkCommandPoolCreateInfo CommandPoolCreateInfo = {};
+		CommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		CommandPoolCreateInfo.pNext = NULL;
+		CommandPoolCreateInfo.queueFamilyIndex = QueueFamilyIndex;
+		CommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		V_CHK(vkCreateCommandPool(Device, &CommandPoolCreateInfo, NULL, &m_CommandPool));
+
+
+		VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {};
+		CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		CommandBufferAllocateInfo.pNext = NULL;
+		CommandBufferAllocateInfo.commandPool = m_CommandPool;
+		CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		CommandBufferAllocateInfo.commandBufferCount = 1;
+
+		V_CHK(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
+		//	vkFreeCommandBuffers
+	}
+
+
+	{
+		V_CHK(vkWaitForFences(Device, 1, &Fence, true, UINT64_MAX));
+		V_CHK(vkResetFences(Device, 1, &Fence));
+	}
+#ifdef RTX
+	if (bSupportRayTracing)
+	{
+		VkPhysicalDeviceProperties2 Properties;
+		bear_fill(PhysicalDeviceRayTracingProperties);
+		PhysicalDeviceRayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
+		PhysicalDeviceRayTracingProperties.pNext = VK_NULL_HANDLE;
+		Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+		Properties.pNext = &PhysicalDeviceRayTracingProperties;
+		vkGetPhysicalDeviceProperties2(PhysicalDevice, &Properties);
+	}
+	BEAR_ASSERT(SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&DxcCompiler))));
+	BEAR_ASSERT(SUCCEEDED(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&DxcLibrary))));
+#endif
+
+	/*	{
 			VkPipelineCacheCreateInfo PipelineCache;
 			PipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 			PipelineCache.pNext = NULL;
@@ -240,139 +334,7 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), PipelineCache
 			PipelineCache.pInitialData = NULL;
 			PipelineCache.flags = 0;
 			V_CHK(vkCreatePipelineCache(Device, &PipelineCache, 0, &PipelineCacheDefault));
-		}
-
-		{
-			VkCommandPoolCreateInfo cmd_pool_info = {};
-			cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-			cmd_pool_info.pNext = NULL;
-			cmd_pool_info.queueFamilyIndex = QueueFamilyIndex;
-			cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-			V_CHK(vkCreateCommandPool(Device, &cmd_pool_info, NULL, &m_CommandPool));
-
-
-			VkCommandBufferAllocateInfo cmd = {};
-			cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			cmd.pNext = NULL;
-			cmd.commandPool = m_CommandPool;
-			cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			cmd.commandBufferCount = 1;
-
-			V_CHK(vkAllocateCommandBuffers(Device, &cmd, &CommandBuffer));
-			//	vkFreeCommandBuffers
-		}
-
-		{
-			VkSamplerCreateInfo samplerInfo = {};
-			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			samplerInfo.magFilter = VK_FILTER_LINEAR;
-			samplerInfo.minFilter = VK_FILTER_LINEAR;
-			samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			samplerInfo.anisotropyEnable = VK_FALSE;
-			samplerInfo.maxAnisotropy =1;
-			samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-			samplerInfo.unnormalizedCoordinates = VK_FALSE;
-			samplerInfo.compareEnable = VK_FALSE;
-			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-			samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-			V_CHK(vkCreateSampler(Device, &samplerInfo, nullptr, &DefaultSampler));
-		}
-		{
-			VkAttachmentDescription attachments[2];
-			attachments[0].format = VK_FORMAT_R8G8B8A8_UNORM;
-			attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-			attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			attachments[0].flags = 0;
-
-			VkAttachmentReference color_reference = {};
-			color_reference.attachment = 0;
-			color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			VkAttachmentReference depth_reference = {};
-			depth_reference.attachment = 1;
-			depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-			VkSubpassDescription subpass = {};
-			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.flags = 0;
-			subpass.inputAttachmentCount = 0;
-			subpass.pInputAttachments = NULL;
-			subpass.colorAttachmentCount = 1;
-			subpass.pColorAttachments = &color_reference;
-			subpass.pResolveAttachments = NULL;
-			subpass.pDepthStencilAttachment = NULL;
-			subpass.preserveAttachmentCount = 0;
-			subpass.pPreserveAttachments = NULL;
-
-			VkRenderPassCreateInfo rp_info = {};
-			rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-			rp_info.pNext = NULL;
-			rp_info.attachmentCount = 1;
-			rp_info.pAttachments = attachments;
-			rp_info.subpassCount = 1;
-			rp_info.pSubpasses = &subpass;
-			rp_info.dependencyCount = 0;
-			rp_info.pDependencies = NULL;
-
-			V_CHK(vkCreateRenderPass(Device, &rp_info, NULL, &RenderPass));
-
-			VkFenceCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-			V_CHK(vkCreateFence(Device, &info, nullptr, &Fence));
-
-			VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-			imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-			imageAcquiredSemaphoreCreateInfo.pNext = NULL;
-			imageAcquiredSemaphoreCreateInfo.flags = 0;
-
-			V_CHK(vkCreateSemaphore(Device, &imageAcquiredSemaphoreCreateInfo, NULL, &SemaphoreWait));
-		}
-		{
-			V_CHK(vkWaitForFences(Device, 1, &Fence, true, UINT64_MAX));
-			V_CHK(vkResetFences(Device, 1, &Fence));
-		}
-		{
-			vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
-		}
-		{
-#ifdef RTX
-			VkPhysicalDeviceProperties2 Properties;
-			bear_fill(PhysicalDeviceRayTracingProperties);
-			PhysicalDeviceRayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
-			PhysicalDeviceRayTracingProperties.pNext = VK_NULL_HANDLE;
-			Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-			Properties.pNext = &PhysicalDeviceRayTracingProperties;
-			vkGetPhysicalDeviceProperties2(PhysicalDevice, &Properties);
-#endif
-		}
-		if (GDebugRender)
-		{
-			CmdBeginDebugUtilsLabelEXT =
-				(PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(
-					Instance,
-					"vkCmdBeginDebugUtilsLabelEXT");
-			CmdEndDebugUtilsLabelEXT =
-				(PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(
-					Instance,
-					"vkCmdEndDebugUtilsLabelEXT");
-
-		}
-#ifdef RTX
-		BEAR_ASSERT(SUCCEEDED( DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&DxcCompiler))));
-		BEAR_ASSERT(SUCCEEDED(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&DxcLibrary))));
-#endif
-	}
-
+		}*/
 }
 
 VKFactory::~VKFactory()
@@ -383,10 +345,6 @@ VKFactory::~VKFactory()
 		DxcLibrary->Release();
 #endif
 	}
-	if (RenderPass) {
-		vkDestroyRenderPass(Device, RenderPass, 0);
-	}
-	if (DefaultSampler) { vkDestroySampler(Device, DefaultSampler, 0); }
 	if(m_CommandPool)
 	{
 		vkDestroySemaphore(Factory->Device, SemaphoreWait, 0);
@@ -395,14 +353,12 @@ VKFactory::~VKFactory()
 		vkFreeCommandBuffers(Device, m_CommandPool, 1, cmd_bufs);
 		vkDestroyCommandPool(Device, m_CommandPool, NULL);
 	}
+#ifdef DEVELOPER_VERSION
 	if (GDebugRender)
 	{
-
-		DestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
+		vkDestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
 	}
-	if (PipelineLayout)vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
-	if (PipelineCacheDefault)
-		vkDestroyPipelineCache(Device, PipelineCacheDefault, nullptr);
+#endif
 	if (Device)
 		vkDestroyDevice(Device, nullptr);
 	if (Instance)
@@ -454,7 +410,7 @@ BearRHI::BearRHIPipelineRayTracing* VKFactory::CreatePipelineRayTracing(const Be
 #endif
 }
 
-BearRHI::BearRHIBottomLevel* VKFactory::CreateBottomLevel(const BearBottomLevelDescription& Description)
+BearRHI::BearRHIRayTracingBottomLevel* VKFactory::CreateRayTracingBottomLevel(const BearRayTracingBottomLevelDescription& Description)
 {
 #ifdef RTX
 	return bear_new<VKBottomLevel>(Description);
@@ -463,7 +419,7 @@ BearRHI::BearRHIBottomLevel* VKFactory::CreateBottomLevel(const BearBottomLevelD
 #endif
 }
 
-BearRHI::BearRHITopLevel* VKFactory::CreateTopLevel(const BearTopLevelDescription& Description)
+BearRHI::BearRHIRayTracingTopLevel* VKFactory::CreateRayTracingTopLevel(const BearRayTracingTopLevelDescription& Description)
 {
 #ifdef RTX
 	return bear_new<VKTopLevel>(Description);
@@ -524,33 +480,33 @@ BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t Width, size_t Heigh
 
 BearRHI::BearRHISampler* VKFactory::CreateSampler(const BearSamplerDescription& Description)
 {
-	return  bear_new<VKSamplerState>(Description);;
+	return  bear_new<VKSamplerState>(Description);
 }
 
 BearRHI::BearRHIRenderPass* VKFactory::CreateRenderPass(const BearRenderPassDescription& Description)
 {
-	return  bear_new<VKRenderPass>(Description);;;
+	return  bear_new<VKRenderPass>(Description);
 }
 
 BearRHI::BearRHIFrameBuffer* VKFactory::CreateFrameBuffer(const BearFrameBufferDescription& Description)
 {
-	return  bear_new<VKFrameBuffer>(Description);;;
+	return  bear_new<VKFrameBuffer>(Description);
 }
 
 VkSamplerAddressMode VKFactory::Translation(BearSamplerAddressMode format)
 {
 	switch (format)
 	{
-	case SAM_WRAP:
+	case BearSamplerAddressMode::Wrap:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		break;
-	case SAM_MIRROR:
+	case BearSamplerAddressMode::Mirror:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
 		break;
-	case SAM_CLAMP:
+	case BearSamplerAddressMode::Clamp:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		break;
-	case SAM_BORDER:
+	case BearSamplerAddressMode::Border:
 		return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 		break;
 	default:
@@ -560,17 +516,17 @@ VkSamplerAddressMode VKFactory::Translation(BearSamplerAddressMode format)
 	return VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 }
 
-VkCullModeFlagBits VKFactory::Translate(BearRasterizerCullMode format)
+VkCullModeFlagBits VKFactory::Translation(BearRasterizerCullMode format)
 {
 	switch (format)
 	{
-	case RCM_NONE:
+	case BearRasterizerCullMode::None:
 		return VK_CULL_MODE_NONE;
 		break;
-	case RCM_FRONT:
+	case BearRasterizerCullMode::Front:
 		return VK_CULL_MODE_FRONT_BIT;
 		break;
-	case RCM_BACK:
+	case BearRasterizerCullMode::Back:
 		return VK_CULL_MODE_BACK_BIT;
 		break;
 	default:
@@ -580,14 +536,14 @@ VkCullModeFlagBits VKFactory::Translate(BearRasterizerCullMode format)
 	return VK_CULL_MODE_NONE;
 }
 
-VkPolygonMode VKFactory::Translate(BearRasterizerFillMode format)
+VkPolygonMode VKFactory::Translation(BearRasterizerFillMode format)
 {
 	switch (format)
 	{
-	case RFM_WIREFRAME:
+	case BearRasterizerFillMode::Wireframe:
 		return VK_POLYGON_MODE_LINE;
 		break;
-	case RFM_SOLID:
+	case BearRasterizerFillMode::Solid:
 		return VK_POLYGON_MODE_FILL;
 		break;
 	default:
@@ -598,14 +554,14 @@ VkPolygonMode VKFactory::Translate(BearRasterizerFillMode format)
 
 }
 
-VkFrontFace VKFactory::Translate(BearRasterizerFrontFace format)
+VkFrontFace VKFactory::Translation(BearRasterizerFrontFace format)
 {
 	switch (format)
 	{
-	case RFF_COUNTER_CLOCKWISE:
+	case BearRasterizerFrontFace::CounterClockwise:
 		return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		break;
-	case RFF_FACE_CLOCKWISE:
+	case BearRasterizerFrontFace::FaceClockwise:
 		return VK_FRONT_FACE_CLOCKWISE;
 		break;
 	default:
@@ -615,44 +571,44 @@ VkFrontFace VKFactory::Translate(BearRasterizerFrontFace format)
 	return VK_FRONT_FACE_CLOCKWISE;
 }
 
-VkBlendFactor VKFactory::Translate(BearBlendFactor format)
+VkBlendFactor VKFactory::Translation(BearBlendFactor format)
 {
 	switch (format)
 	{
-	case BF_ZERO:
+	case BearBlendFactor::Zero:
 		return VK_BLEND_FACTOR_ZERO;
 		break;
-	case BF_ONE:
+	case BearBlendFactor::One:
 		return VK_BLEND_FACTOR_ONE;
 		break;
-	case BF_SRC_COLOR:
+	case BearBlendFactor::SrcColor:
 		return VK_BLEND_FACTOR_SRC_COLOR;
 		break;
-	case BF_INV_SRC_COLOR:
+	case BearBlendFactor::InvSrcColor:
 		return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
 		break;
-	case BF_SRC_ALPHA:
+	case BearBlendFactor::SrcAlpha:
 		return VK_BLEND_FACTOR_SRC_ALPHA;
 		break;
-	case BF_INV_SRC_ALPHA:
+	case BearBlendFactor::InvSrcAlpha:
 		return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		break;
-	case BF_DEST_ALPHA:
+	case BearBlendFactor::DestAlpha:
 		return VK_BLEND_FACTOR_DST_ALPHA;
 		break;
-	case BF_INV_DEST_ALPHA:
+	case BearBlendFactor::InvDestAlpha:
 		return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
 		break;
-	case BF_DEST_COLOR:
+	case BearBlendFactor::DestColor:
 		return VK_BLEND_FACTOR_DST_COLOR;
 		break;
-	case BF_INV_DEST_COLOR:
+	case BearBlendFactor::InvDestColor:
 		return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
 		break;
-	case BF_BLEND_FACTOR:
+	case BearBlendFactor::BlendFactor:
 		return VK_BLEND_FACTOR_CONSTANT_COLOR;
 		break;
-	case BF_INV_BLEND_FACTOR:
+	case BearBlendFactor::InvBlendFactor:
 		return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 		break;
 	default:
@@ -662,23 +618,23 @@ VkBlendFactor VKFactory::Translate(BearBlendFactor format)
 	return VK_BLEND_FACTOR_ZERO;
 }
 
-VkBlendOp VKFactory::Translate(BearBlendOp format)
+VkBlendOp VKFactory::Translation(BearBlendOp format)
 {
 	switch (format)
 	{
-	case BO_ADD:
+	case BearBlendOp::Add:
 		return VK_BLEND_OP_ADD;
 		break;
-	case BO_SUBTRACT:
+	case BearBlendOp::Subtract:
 		VK_BLEND_OP_SUBTRACT;
 		break;
-	case BO_REV_SUBTRACT:
+	case BearBlendOp::RevSubtract:
 		VK_BLEND_OP_REVERSE_SUBTRACT;
 		break;
-	case BO_MIN:
+	case BearBlendOp::Min:
 		VK_BLEND_OP_MIN;
 		break;
-	case BO_MAX:
+	case BearBlendOp::Max:
 		VK_BLEND_OP_MAX;
 		break;
 	default:
@@ -688,32 +644,32 @@ VkBlendOp VKFactory::Translate(BearBlendOp format)
 	return VK_BLEND_OP_ADD;
 }
 
-VkCompareOp VKFactory::Translate(BearCompareFunction format)
+VkCompareOp VKFactory::Translation(BearCompareFunction format)
 {
 	switch (format)
 	{
-	case CF_NEVER:
+	case BearCompareFunction::Never:
 		return VK_COMPARE_OP_NEVER;
 		break;
-	case CF_ALWAYS:
+	case BearCompareFunction::Always:
 		return VK_COMPARE_OP_ALWAYS;
 		break;
-	case CF_EQUAL:
+	case BearCompareFunction::Equal:
 		return VK_COMPARE_OP_EQUAL;
 		break;
-	case CF_NOTEQUAL:
+	case BearCompareFunction::NotEqual:
 		return VK_COMPARE_OP_NOT_EQUAL;
 		break;
-	case CF_LESS:
+	case BearCompareFunction::Less:
 		return VK_COMPARE_OP_LESS;
 		break;
-	case CF_GREATER:
+	case BearCompareFunction::Greater:
 		return VK_COMPARE_OP_GREATER;
 		break;
-	case CF_LESSEQUAL:
+	case BearCompareFunction::LessEqual:
 		return VK_COMPARE_OP_LESS_OR_EQUAL;
 		break;
-	case CF_GREATEREQUAL:
+	case BearCompareFunction::GreaterEqual:
 		return VK_COMPARE_OP_GREATER_OR_EQUAL;
 		break;
 	default:
@@ -723,32 +679,32 @@ VkCompareOp VKFactory::Translate(BearCompareFunction format)
 	return VK_COMPARE_OP_NEVER;
 }
 
-VkStencilOp VKFactory::Translate(BearStencilOp format)
+VkStencilOp VKFactory::Translation(BearStencilOp format)
 {
 	switch (format)
 	{
-	case SO_KEEP:
+	case BearStencilOp::Keep:
 		return VK_STENCIL_OP_KEEP;
 		break;
-	case SO_ZERO:
+	case BearStencilOp::Zero:
 		return VK_STENCIL_OP_ZERO;
 		break;
-	case SO_REPLACE:
+	case BearStencilOp::Replace:
 		return VK_STENCIL_OP_REPLACE;
 		break;
-	case SO_INCR_SAT:
+	case BearStencilOp::IncrSat:
 		return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
 		break;
-	case SO_DECR_SAT:
+	case BearStencilOp::DecrSat:
 		return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
 		break;
-	case SO_INVERT:
+	case BearStencilOp::Invert:
 		return VK_STENCIL_OP_INVERT;
 		break;
-	case SO_INCR:
+	case BearStencilOp::Incr:
 		return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 		break;
-	case SO_DECR:
+	case BearStencilOp::Decr:
 		return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 		break;
 	default:
@@ -762,41 +718,41 @@ VkFormat VKFactory::Translation(BearTexturePixelFormat format)
 {
 	switch (format)
 	{
-	case TPF_NONE:
+	case BearTexturePixelFormat::None:
 		BEAR_CHECK(0);
 		break;
-	case TPF_R8:
+	case BearTexturePixelFormat::R8:
 		return VK_FORMAT_R8_UNORM;
-	case TPF_R8G8:
+	case BearTexturePixelFormat::R8G8:
 		return VK_FORMAT_R8G8_UNORM;
-	case TPF_R8G8B8:
+	case BearTexturePixelFormat::R8G8B8:
 		return VK_FORMAT_R8G8B8_UNORM;
-	case TPF_R8G8B8A8:
+	case BearTexturePixelFormat::R8G8B8A8:
 		return VK_FORMAT_R8G8B8A8_UNORM;
-	case TPF_R32F:
+	case BearTexturePixelFormat::R32F:
 		return VK_FORMAT_R32_SFLOAT;
-	case TPF_R32G32F:
+	case BearTexturePixelFormat::R32G32F:
 		return VK_FORMAT_R32G32_SFLOAT;
-	case TPF_R32G32B32F:
+	case BearTexturePixelFormat::R32G32B32F:
 		return VK_FORMAT_R32G32B32_SFLOAT;
-	case TPF_R32G32B32A32F:
+	case BearTexturePixelFormat::R32G32B32A32F:
 		return VK_FORMAT_R32G32B32A32_SFLOAT;
-	case TPF_BC1:
+	case BearTexturePixelFormat::BC1:
 		return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
-	case TPF_BC1a:
+	case BearTexturePixelFormat::BC1a:
 		return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-	case TPF_BC2:
+	case BearTexturePixelFormat::BC2:
 		return VK_FORMAT_BC2_UNORM_BLOCK;
-	case TPF_BC3:
+	case BearTexturePixelFormat::BC3:
 		return VK_FORMAT_BC3_UNORM_BLOCK;
 		break;
-	case TPF_BC4:
+	case BearTexturePixelFormat::BC4:
 		return VK_FORMAT_BC4_UNORM_BLOCK;
-	case TPF_BC5:
+	case BearTexturePixelFormat::BC5:
 		return VK_FORMAT_BC5_UNORM_BLOCK;
-	case TPF_BC6:
+	case BearTexturePixelFormat::BC6:
 		return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-	case TPF_BC7:
+	case BearTexturePixelFormat::BC7:
 		return VK_FORMAT_BC7_UNORM_BLOCK;
 	default:	BEAR_CHECK(0);
 		break;
@@ -808,30 +764,30 @@ VkFormat VKFactory::Translation(BearRenderTargetFormat format)
 {
 	switch (format)
 	{
-	case RTF_NONE:
+	case BearRenderTargetFormat::None:
 		break;
-	case RTF_R8:
+	case BearRenderTargetFormat::R8:
 		return VK_FORMAT_R8_UNORM;
 		break;
-	case RTF_R8G8:
+	case BearRenderTargetFormat::R8G8:
 		return VK_FORMAT_R8G8_UNORM;
 		break;
-	case RTF_R8G8B8A8:
+	case BearRenderTargetFormat::R8G8B8A8:
 		return VK_FORMAT_R8G8B8A8_UNORM;
 		break;
-	case RTF_B8G8R8A8:
+	case BearRenderTargetFormat::B8G8R8A8:
 		return VK_FORMAT_B8G8R8A8_UNORM;
 		break;
-	case RTF_R32F:
+	case BearRenderTargetFormat::R32F:
 		return VK_FORMAT_R32_SFLOAT;
 		break;
-	case RTF_R32G32F:
+	case BearRenderTargetFormat::R32G32F:
 		return VK_FORMAT_R32G32_SFLOAT;
 		break;
-	case RTF_R32G32B32F:
+	case BearRenderTargetFormat::R32G32B32F:
 		return VK_FORMAT_R32G32B32_SFLOAT;
 		break;
-	case RTF_R32G32B32A32F:
+	case BearRenderTargetFormat::R32G32B32A32F:
 		return VK_FORMAT_R32G32B32A32_SFLOAT;
 		break;
 	default:
@@ -845,16 +801,16 @@ VkFormat VKFactory::Translation(BearDepthStencilFormat format)
 {
 	switch (format)
 	{
-	case DSF_DEPTH16:
+	case BearDepthStencilFormat::Depth16:
 		return VK_FORMAT_D16_UNORM;
 		break;
-	case DSF_DEPTH32F:
+	case BearDepthStencilFormat::Depth32F:
 		return VK_FORMAT_D32_SFLOAT;
 		break;
-	case DSF_DEPTH24_STENCIL8:
+	case BearDepthStencilFormat::Depth24Stencil8:
 		return VK_FORMAT_D24_UNORM_S8_UINT;
 		break;
-	case DSF_DEPTH32F_STENCIL8:
+	case BearDepthStencilFormat::Depth32FStencil8:
 		return VK_FORMAT_D32_SFLOAT_S8_UINT;
 		break;
 	default:
@@ -866,7 +822,11 @@ VkFormat VKFactory::Translation(BearDepthStencilFormat format)
 
 bool VKFactory::SupportRayTracing()
 {
+#ifdef RTX
+	return bSupportRayTracing;
+#else
 	return false;
+#endif
 }
 
 bool VKFactory::SupportMeshShader()
@@ -886,29 +846,22 @@ void VKFactory::LockCommandBuffer()
 	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
 }
 
-void VKFactory::UnlockCommandBuffer(const VkSemaphore* pSignalSemaphores)
+void VKFactory::UnlockCommandBuffer()
 {
 	static VkPipelineStageFlags StageOut = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 	V_CHK(vkEndCommandBuffer(CommandBuffer));
-	VkSubmitInfo submit_info = {};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.waitSemaphoreCount = 0;
-	submit_info.pWaitSemaphores = 0;
-	submit_info.signalSemaphoreCount = 0;
-	submit_info.pSignalSemaphores = 0;// &buf.acquire_semaphore;
-	submit_info.pWaitDstStageMask = &StageOut;
-	submit_info.pCommandBuffers = &CommandBuffer;
-	submit_info.commandBufferCount = 1;
-	V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
+	VkSubmitInfo SubmitInfo = {};
+	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	SubmitInfo.waitSemaphoreCount = 0;
+	SubmitInfo.pWaitSemaphores = 0;
+	SubmitInfo.signalSemaphoreCount = 0;
+	SubmitInfo.pSignalSemaphores = 0;// &buf.acquire_semaphore;
+	SubmitInfo.pWaitDstStageMask = &StageOut;
+	SubmitInfo.pCommandBuffers = &CommandBuffer;
+	SubmitInfo.commandBufferCount = 1;
+	V_CHK(vkQueueSubmit(Factory->Queue, 1, &SubmitInfo, Fence));
 	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
 	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
 	m_CommandMutex.Unlock();
-}
-
-void VKFactory::LoadFunctions()
-{
-#define REGISTRATION_DEVICE(name)
-#define REGISTRATION(name)  name = BearManagerDynamicLibraries::GetFunctionInProject<PFN_##name>(TEXT("vulkan-1"),#name);BEAR_CHECK(name);
-#include "VKImports.h"
 }
 

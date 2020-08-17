@@ -1,7 +1,12 @@
 #pragma once
 class VKFactory :public BearRHI::BearRHIFactory
 {
-	//BEAR_CLASS_WITHOUT_COPY(VKFactory);
+	BEAR_CLASS_WITHOUT_COPY(VKFactory);
+private:
+	bool LoadFunctions();
+	bool CreateInstance();
+	bool CreateDevice();
+	bool CreateGPU(uint32_t& queue_family_index);
 public:
 	VKFactory();
 	virtual ~VKFactory();
@@ -26,30 +31,31 @@ public:
 	virtual BearRHI::BearRHIFrameBuffer* CreateFrameBuffer(const BearFrameBufferDescription& Description);
 
 	virtual BearRHI::BearRHIPipelineRayTracing* CreatePipelineRayTracing(const BearPipelineRayTracingDescription& Description);
-	virtual BearRHI::BearRHIBottomLevel* CreateBottomLevel(const BearBottomLevelDescription& Description);
-	virtual BearRHI::BearRHITopLevel* CreateTopLevel(const BearTopLevelDescription& Description);
+	virtual BearRHI::BearRHIRayTracingBottomLevel* CreateRayTracingBottomLevel(const BearRayTracingBottomLevelDescription& Description);
+	virtual BearRHI::BearRHIRayTracingTopLevel* CreateRayTracingTopLevel(const BearRayTracingTopLevelDescription& Description);
 	virtual BearRHI::BearRHIRayTracingShaderTable* CreateRayTracingShaderTable(const BearRayTracingShaderTableDescription& Description);
 
 	static VkSamplerAddressMode Translation(BearSamplerAddressMode format);
-	static VkCullModeFlagBits Translate(BearRasterizerCullMode format);
-	static VkPolygonMode Translate(BearRasterizerFillMode format);
-	static VkFrontFace Translate(BearRasterizerFrontFace format);
+	static VkCullModeFlagBits Translation(BearRasterizerCullMode format);
+	static VkPolygonMode Translation(BearRasterizerFillMode format);
+	static VkFrontFace Translation(BearRasterizerFrontFace format);
 
-	static VkBlendFactor Translate(BearBlendFactor format);
-	static VkBlendOp Translate(BearBlendOp format);
-	static VkCompareOp Translate(BearCompareFunction format);
-	static VkStencilOp Translate(BearStencilOp format);
+	static VkBlendFactor Translation(BearBlendFactor format);
+	static VkBlendOp Translation(BearBlendOp format);
+	static VkCompareOp Translation(BearCompareFunction format);
+	static VkStencilOp Translation(BearStencilOp format);
 
 	static VkFormat  Translation(BearTexturePixelFormat format);
 	static VkFormat  Translation(BearRenderTargetFormat format);
 	static VkFormat  Translation(BearDepthStencilFormat format);
+public:
 	inline bool Empty()const { return Instance==0; }
 	virtual bool SupportRayTracing();
 	virtual bool SupportMeshShader();
 public:
 	VkCommandBuffer CommandBuffer;
 	void LockCommandBuffer();
-	void UnlockCommandBuffer(const VkSemaphore* SignalSemaphores=0);
+	void UnlockCommandBuffer();
 private:
 	BearMutex m_CommandMutex;
 	VkCommandPool m_CommandPool;
@@ -59,28 +65,27 @@ public:
 #ifdef RTX
 	VkPhysicalDeviceRayTracingPropertiesNV PhysicalDeviceRayTracingProperties;
 #endif
-	VkSampler DefaultSampler;
+	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+public:
 	VkInstance Instance;
 	VkPhysicalDevice PhysicalDevice;
 	VkDevice Device;
-	VkPipelineCache PipelineCacheDefault;
-	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
-	VkPipelineLayout PipelineLayout;
+public:
 	uint32_t QueueFamilyIndex;
 	VkQueue Queue;
-
 	VkSemaphore SemaphoreWait;
 	VkFence Fence;
-	VkDebugUtilsMessengerEXT DebugMessenger;
-
-	VkRenderPass RenderPass;
 private:
-	void LoadFunctions();
+#ifdef DEVELOPER_VERSION
+	VkDebugUtilsMessengerEXT DebugMessenger;
+#endif
 public:
 #ifdef RTX
 	IDxcCompiler3* DxcCompiler;
 	IDxcLibrary* DxcLibrary;
 #endif
+private:
+	bool bSupportRayTracing;
 };
 
 extern VKFactory* Factory;

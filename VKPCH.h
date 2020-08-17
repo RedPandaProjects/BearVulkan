@@ -28,8 +28,8 @@
 #define VK_NO_PROTOTYPES
 
 #include "vulkan/vulkan.h"
-extern void vk_error(VkResult result);
-#define V_CHK(a) { VkResult __result_ = a ;if(__result_!=VK_SUCCESS)vk_error(__result_); }
+extern void VkError(VkResult result);
+#define V_CHK(a) { VkResult __Result_ = a ;if(__Result_!=VK_SUCCESS)VkError(__Result_); }
 
 enum EVKQuery
 {
@@ -39,6 +39,7 @@ enum EVKQuery
 	VKQ_Pipeline,
 	VKQ_RayTracingPipeline
 };
+
 #include "VKImports.h"
 #include "VKFactory.h"
 #include "VKViewport.h"
