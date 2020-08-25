@@ -8,7 +8,7 @@ public:
 	
 	struct ShaderRecord
 	{
-		ShaderRecord():Buffer(nullptr), Memory(nullptr),Stride(0){}
+		ShaderRecord():Buffer(0), Memory(0),Stride(0){}
 		VkBuffer Buffer;
 		VkDeviceMemory Memory;
 		bsize Stride;

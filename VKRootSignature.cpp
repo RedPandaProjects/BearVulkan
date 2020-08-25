@@ -1,6 +1,6 @@
 #include "VKPCH.h"
 size_t RootSignatureCounter = 0;
-inline VkShaderStageFlagBits TransletionShaderVisible(BearShaderType type)
+inline VkShaderStageFlags TransletionShaderVisible(BearShaderType type)
 {
 	switch (type)
 	{
@@ -23,7 +23,12 @@ inline VkShaderStageFlagBits TransletionShaderVisible(BearShaderType type)
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
 		break;
 	case BearShaderType::RayTracing:
-		return VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_NV;
+		return VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR |
+			VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR |
+			VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR |
+			VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR |
+			VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+			VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
 		break;
 	case BearShaderType::ALL:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_ALL;

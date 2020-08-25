@@ -240,7 +240,7 @@ VKPipelineGraphics::VKPipelineGraphics(const BearPipelineGraphicsDescription& de
 	GraphicsPipelineCreateInfo.renderPass = static_cast<const VKRenderPass*>(description.RenderPass.get())->RenderPass;
 	GraphicsPipelineCreateInfo.stageCount = static_cast<uint32>(CountShader); 
 	GraphicsPipelineCreateInfo.subpass = 0;
-	V_CHK(vkCreateGraphicsPipelines(Factory->Device,nullptr, 1, &GraphicsPipelineCreateInfo, NULL, &Pipeline));
+	V_CHK(vkCreateGraphicsPipelines(Factory->Device,0, 1, &GraphicsPipelineCreateInfo, NULL, &Pipeline));
 }
 
 VKPipelineGraphics::~VKPipelineGraphics()
