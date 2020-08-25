@@ -3,11 +3,14 @@ class VKRayTracingShaderTable :public BearRHI::BearRHIRayTracingShaderTable
 {
 	//BEAR_CLASS_WITHOUT_COPY(VKUniformBuffer);
 public:
-	VKRayTracingShaderTable(const BearRayTracingShaderTableDescription& Description);
+	VKRayTracingShaderTable(const BearRayTracingShaderTableDescription& description);
 	virtual ~VKRayTracingShaderTable();
-	VkBuffer Buffer;
-	bsize Size;
-private:
-	VkDeviceMemory Memory;
-
+	
+	struct ShaderRecord
+	{
+		ShaderRecord():Buffer(nullptr), Memory(nullptr),Stride(0){}
+		VkBuffer Buffer;
+		VkDeviceMemory Memory;
+		bsize Stride;
+	} RayGenerateRecord,MissRecord,HitGroups, CallableRecord;
 };

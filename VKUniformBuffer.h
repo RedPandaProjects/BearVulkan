@@ -3,7 +3,7 @@ class VKUniformBuffer :public BearRHI::BearRHIUniformBuffer
 {
 	//BEAR_CLASS_WITHOUT_COPY(VKUniformBuffer);
 public:
-	VKUniformBuffer(size_t Stride, size_t Count, bool Dynamic);
+	VKUniformBuffer(size_t stride, size_t count, bool dynamic);
 	virtual ~VKUniformBuffer();
 	virtual void* Lock();
 	virtual void Unlock();
@@ -13,7 +13,7 @@ public:
 	size_t Stride;
 	size_t Count;
 private:
-	VkDeviceMemory Memory;
-	bool m_dynamic;
+	VkDeviceMemory m_Memory;
+	bool m_Dynamic;
 
 };

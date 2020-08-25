@@ -1,6 +1,6 @@
 #include "VKPCH.h"
 size_t ShaderCounter = 0;
-VKShader::VKShader(BearShaderType type):Type(type)
+VKShader::VKShader(BearShaderType type):m_Type(type)
 {
 	ShaderCounter++;
 	Shader.module = 0;
@@ -37,7 +37,7 @@ static void CallbackInclduerRelease(void* user_data, shaderc_include_result* inc
 	bear_free(include_result);
 }
 extern bool GDebugRender;
-bool VKShader::LoadAsTextShaderc(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer)
+bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer)
 {
 	shaderc_compiler_t compiler = shaderc_compiler_initialize();
 	shaderc_compile_options_t options = shaderc_compile_options_initialize();
@@ -66,32 +66,32 @@ bool VKShader::LoadAsTextShaderc(const bchar* Text, const bchar* EntryPoint, con
 		shaderc_compile_options_set_optimization_level(options, shaderc_optimization_level_performance);
 	}
 	shaderc_shader_kind shader_kind = shaderc_shader_kind::shaderc_vertex_shader;
-	switch (Type)
+	switch (m_Type)
 	{
-	case ST_Vertex:
+	case BearShaderType::Vertex:
 		shader_kind = shaderc_shader_kind::shaderc_vertex_shader;
 		break;
-	case ST_Hull:
+	case BearShaderType::Hull:
 		shader_kind = shaderc_shader_kind::shaderc_tess_control_shader;
 		break;
-	case ST_Domain:
+	case BearShaderType::Domain:
 		shader_kind = shaderc_shader_kind::shaderc_tess_evaluation_shader;
 		break;
-	case ST_Geometry:
+	case BearShaderType::Geometry:
 		shader_kind = shaderc_shader_kind::shaderc_geometry_shader;
 		break;
-	case ST_Pixel:
+	case BearShaderType::Pixel:
 		shader_kind = shaderc_shader_kind::shaderc_fragment_shader;
 		break;
-	case ST_Compute:
+	case BearShaderType::Compute:
 		shader_kind = shaderc_shader_kind::shaderc_compute_shader;
 		break;
 	default:
 		BEAR_CHECK(0);
 		break;
 	};
-	shaderc_compile_options_set_include_callbacks(options, &CallbackIncluder, &CallbackInclduerRelease, reinterpret_cast<void*>(Includer));
-	for (auto b = Defines.begin(), e = Defines.end(); b != e; b++)
+	shaderc_compile_options_set_include_callbacks(options, &CallbackIncluder, &CallbackInclduerRelease, reinterpret_cast<void*>(includer));
+	for (auto b = defines.begin(), e = defines.end(); b != e; b++)
 	{
 #ifdef UNICODE
 		shaderc_compile_options_add_macro_definition(options, *BearEncoding::FastToAnsi(*b->first), b->first.size(), *BearEncoding::FastToAnsi(*b->second), b->second.size());
@@ -101,20 +101,20 @@ bool VKShader::LoadAsTextShaderc(const bchar* Text, const bchar* EntryPoint, con
 #endif
 	}
 #ifdef UNICODE
-	EntryPointName = *BearEncoding::FastToAnsi(EntryPoint);
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(Text), BearString::GetSize(Text), shader_kind, "noname", *BearEncoding::FastToAnsi(EntryPoint), options);
+	EntryPointName = *BearEncoding::FastToAnsi(entry_point);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(text), BearString::GetSize(text), shader_kind, "noname", *BearEncoding::FastToAnsi(entry_point), options);
 #else
-	EntryPointName = EntryPoint;
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, Text, strlen(Text), shader_kind, "noname", EntryPoint, options);
+	m_EntryPointName = entry_point;
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, text, strlen(text), shader_kind, "noname", entry_point, options);
 #endif
 
 	if (shaderc_result_get_compilation_status(result) == shaderc_compilation_status_compilation_error)
 	{
 		const char* text = shaderc_result_get_error_message(result);
 #ifdef UNICODE
-		OutError = BearEncoding::FastToUnicode(text);
+		out_error = BearEncoding::FastToUnicode(text);
 #else
-		OutError = text;
+		out_error = text;
 #endif
 		shaderc_compile_options_release(options);
 		shaderc_result_release(result);
@@ -126,9 +126,9 @@ bool VKShader::LoadAsTextShaderc(const bchar* Text, const bchar* EntryPoint, con
 	{
 		const char* text = shaderc_result_get_error_message(result);
 #ifdef UNICODE
-		OutError = BearEncoding::FastToUnicode(text);
+		out_error = BearEncoding::FastToUnicode(text);
 #else
-		OutError = text;
+		out_error = text;
 #endif
 	}
 	if (shaderc_result_get_compilation_status(result) != shaderc_compilation_status_success)
@@ -148,25 +148,20 @@ bool VKShader::LoadAsTextShaderc(const bchar* Text, const bchar* EntryPoint, con
 
 	return true;
 }
-bool VKShader::LoadAsText(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer)
+bool VKShader::LoadAsText(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer)
 {
-	switch (Type)
+	switch (m_Type)
 	{
-	case ST_Mesh:
+	case BearShaderType::Mesh:
 		break;
-	case ST_Amplification:
+	case BearShaderType::Amplification:
 		break;
 #ifdef RTX
-	case ST_RayGeneration:
-	case ST_Miss:
-	case ST_Callable:
-	case ST_Intersection:
-	case ST_ClosestHit:
-	case ST_AnyHit:
-		return LoadAsTextDXC(Text, EntryPoint, Defines, OutError, Includer);
+	case BearShaderType::RayTracing:
+		return LoadAsTextDXC(text, entry_point, defines, out_error, includer);
 #endif
 	default:
-		return LoadAsTextShaderc(Text, EntryPoint, Defines, OutError, Includer);
+		return LoadAsTextShaderc(text, entry_point, defines, out_error, includer);
 		break;
 	}
 }
@@ -201,52 +196,34 @@ void VKShader::CreateShader()
 	Shader.pNext = NULL;
 	Shader.pSpecializationInfo = NULL;
 	Shader.flags = 0;
-	switch (Type)
+	switch (m_Type)
 	{
-	case ST_Vertex:
+	case BearShaderType::Vertex:
 		Shader.stage = VK_SHADER_STAGE_VERTEX_BIT;
 		break;
-	case ST_Pixel:
+	case BearShaderType::Pixel:
 		Shader.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 		break;
-	case ST_Hull:
+	case BearShaderType::Hull:
 		Shader.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
 		break;
-	case ST_Domain:
+	case BearShaderType::Domain:
 		Shader.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
 		break;
-	case ST_Geometry:
+	case BearShaderType::Geometry:
 		Shader.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
 		break;
-	case ST_Compute:
+	case BearShaderType::Compute:
 		Shader.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 		break;
-#ifdef RTX
-	case ST_RayGeneration:
-		Shader.stage = VK_SHADER_STAGE_RAYGEN_BIT_NV;
+	case BearShaderType::RayTracing:
 		break;
-	case ST_Miss:
-		Shader.stage = VK_SHADER_STAGE_MISS_BIT_NV;
-		break;
-	case ST_Callable:
-		Shader.stage = VK_SHADER_STAGE_CALLABLE_BIT_NV;
-		break;
-	case ST_Intersection:
-		Shader.stage = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
-		break;
-	case ST_AnyHit:
-		Shader.stage = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
-		break;
-	case ST_ClosestHit:
-		Shader.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
-		break;
-#endif
 	default:
 		BEAR_ASSERT(0);
 		break;
 	}
 
-	Shader.pName = *EntryPointName;
+	Shader.pName = *m_EntryPointName;
 
 	VkShaderModuleCreateInfo moduleCreateInfo;
 	moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

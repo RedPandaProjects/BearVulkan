@@ -3,7 +3,7 @@ class VKRootSignature :public BearRHI::BearRHIRootSignature
 {
 	//BEAR_CLASS_WITHOUT_COPY(VKRootSignature);
 public:
-	VKRootSignature(const BearRootSignatureDescription& desc);
+	VKRootSignature(const BearRootSignatureDescription& description);
 	virtual ~VKRootSignature();
 	size_t CountBuffers;
 	size_t CountSRVs;

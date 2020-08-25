@@ -1,95 +1,95 @@
 #include "VKPCH.h"
 size_t SamplerCounter = 0;
-VKSamplerState::VKSamplerState(const BearSamplerDescription& Description)
+VKSamplerState::VKSamplerState(const BearSamplerDescription& description)
 {
-    VkSamplerCreateInfo samplerInfo = {};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    VkSamplerCreateInfo SamplerCreateInfo = {};
+    SamplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
-	samplerInfo.addressModeU = VKFactory::Translation(Description.AddressU);
-	samplerInfo.addressModeV = VKFactory::Translation(Description.AddressV);
-	samplerInfo.addressModeW = VKFactory::Translation(Description.AddressW);
+	SamplerCreateInfo.addressModeU = VKFactory::Translation(description.AddressU);
+	SamplerCreateInfo.addressModeV = VKFactory::Translation(description.AddressV);
+	SamplerCreateInfo.addressModeW = VKFactory::Translation(description.AddressW);
 
-	switch (Description.Filter)
+	switch (description.Filter)
 	{
-	case	SF_MIN_MAG_MIP_POINT:
-		samplerInfo.magFilter = VK_FILTER_NEAREST;
-		samplerInfo.minFilter = VK_FILTER_NEAREST;
-		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	case	BearSamplerFilter::MinMagMipPoint:
+		SamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+		SamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+		SamplerCreateInfo.anisotropyEnable = VK_FALSE;
+		SamplerCreateInfo.compareEnable = VK_FALSE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		break;
-	case	SF_MIN_MAG_LINEAR_MIP_POINT:
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	case	BearSamplerFilter::MinMagLinearMipPoint:
+		SamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.anisotropyEnable = VK_FALSE;
+		SamplerCreateInfo.compareEnable = VK_FALSE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		break;
-	case	SF_MIN_MAG_MIP_LINEAR:
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case	BearSamplerFilter::MinMagMipLinear:
+		SamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.anisotropyEnable = VK_FALSE;
+		SamplerCreateInfo.compareEnable = VK_FALSE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		break;
-	case	SF_ANISOTROPIC:
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.anisotropyEnable = VK_TRUE;
-		samplerInfo.compareEnable = VK_FALSE;
-		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case	BearSamplerFilter::Anisotropic:
+		SamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.anisotropyEnable = VK_TRUE;
+		SamplerCreateInfo.compareEnable = VK_FALSE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		break;
-	case	SF_COMPARISON_MIN_MAG_MIP_POINT:
-		samplerInfo.magFilter = VK_FILTER_NEAREST;
-		samplerInfo.minFilter = VK_FILTER_NEAREST;
-		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.compareEnable = VK_TRUE;
-		samplerInfo.compareOp = VK_COMPARE_OP_LESS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	case	BearSamplerFilter::ComparisonMinMagMipPoint:
+		SamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+		SamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+		SamplerCreateInfo.anisotropyEnable = VK_FALSE;
+		SamplerCreateInfo.compareEnable = VK_TRUE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_LESS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		break;
-	case	SF_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.compareEnable = VK_TRUE;
-		samplerInfo.compareOp = VK_COMPARE_OP_LESS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	case	BearSamplerFilter::ComparisonMinMagLinearMipPoint:
+		SamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.anisotropyEnable = VK_FALSE;
+		SamplerCreateInfo.compareEnable = VK_TRUE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_LESS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		break;
-	case	SF_COMPARISON_MIN_MAG_MIP_LINEAR:
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.compareEnable = VK_TRUE;
-		samplerInfo.compareOp = VK_COMPARE_OP_LESS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case	BearSamplerFilter::ComparisonMinMagMipLinear:
+		SamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.anisotropyEnable = VK_FALSE;
+		SamplerCreateInfo.compareEnable = VK_TRUE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_LESS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		break;
-	case	SF_COMPARISON_ANISOTROPIC:
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
-		samplerInfo.anisotropyEnable = VK_TRUE;
-		samplerInfo.compareEnable = VK_TRUE;
-		samplerInfo.compareOp = VK_COMPARE_OP_LESS;
-		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case	BearSamplerFilter::ComparisonAnisotropic:
+		SamplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+		SamplerCreateInfo.anisotropyEnable = VK_TRUE;
+		SamplerCreateInfo.compareEnable = VK_TRUE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_LESS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		break;
 	default:
 		BEAR_CHECK(0);
 	}
-	samplerInfo.mipLodBias = static_cast<float>(Description.MipBias);
-	samplerInfo.maxLod = 3.402823466e+38f;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	SamplerCreateInfo.mipLodBias = static_cast<float>(description.MipBias);
+	SamplerCreateInfo.maxLod = 3.402823466e+38f;
+    SamplerCreateInfo.addressModeU = VKFactory::Translation(description.AddressU);
+    SamplerCreateInfo.addressModeV = VKFactory::Translation(description.AddressV);
+    SamplerCreateInfo.addressModeW = VKFactory::Translation(description.AddressW);
 
-    samplerInfo.maxAnisotropy =static_cast<float>( Description.MaxAnisotropy);
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    SamplerCreateInfo.maxAnisotropy =static_cast<float>( description.MaxAnisotropy);
+    SamplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    SamplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
 
     SamplerCounter++;
-    V_CHK(vkCreateSampler(Factory->Device, &samplerInfo, nullptr, &ImageInfo.sampler));
+    V_CHK(vkCreateSampler(Factory->Device, &SamplerCreateInfo, nullptr, &ImageInfo.sampler));
 }
 
 VKSamplerState::~VKSamplerState()

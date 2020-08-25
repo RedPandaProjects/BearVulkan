@@ -2,7 +2,7 @@
 class VKRenderPass :public BearRHI::BearRHIRenderPass
 {
 public:
-	VKRenderPass(const BearRenderPassDescription& Description);
+	VKRenderPass(const BearRenderPassDescription& description);
 	virtual ~VKRenderPass();
 	BearRenderPassDescription Description;
 	size_t CountRenderTarget;

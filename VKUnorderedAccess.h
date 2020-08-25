@@ -3,9 +3,9 @@ class VKUnorderedAccess :public virtual  BearRHI::BearRHIUnorderedAccess, public
 {
 public:
 	VKUnorderedAccess() { bAllowUAV = false; }
-	virtual void SetAsUAV(VkWriteDescriptorSet* HEAP, size_t offset) = 0;
-	virtual void LockUAV(VkCommandBuffer  CommandLine) = 0;
-	virtual void UnlockUAV(VkCommandBuffer  CommandLine) = 0;
+	virtual void SetAsUAV(VkWriteDescriptorSet* heap, size_t offset) = 0;
+	virtual void LockUAV(VkCommandBuffer  command_line) = 0;
+	virtual void UnlockUAV(VkCommandBuffer  command_line) = 0;
 protected:
 	bool bAllowUAV;
 };

@@ -2,11 +2,11 @@
 class VKFrameBuffer :public BearRHI::BearRHIFrameBuffer
 {
 public:
-	VKFrameBuffer(const BearFrameBufferDescription& Description);
+	VKFrameBuffer(const BearFrameBufferDescription& description);
 	virtual ~VKFrameBuffer();
 	VkRenderPassBeginInfo GetRenderPass();
-	void Unlock(VkCommandBuffer Cmd);
-	void Lock(VkCommandBuffer Cmd);
+	void Unlock(VkCommandBuffer comand_list);
+	void Lock(VkCommandBuffer comand_list);
 	BearFrameBufferDescription Description;
 	size_t CountRenderTarget;
 	VkFramebuffer FrameBuffer;

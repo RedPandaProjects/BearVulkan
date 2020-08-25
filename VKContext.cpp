@@ -1,61 +1,62 @@
 #include "VKPCH.h"
 size_t ContextCounter = 0;
+
+#ifdef DEVELOPER_VERSION
 extern bool GDebugRender;
-extern PFN_vkCmdBeginDebugUtilsLabelEXT CmdBeginDebugUtilsLabelEXT;
-extern PFN_vkCmdEndDebugUtilsLabelEXT CmdEndDebugUtilsLabelEXT;
+#endif
 
-VKContext::VKContext()
+VKContext::VKContext() :m_PipelineType(BearPipelineType::Graphics), m_UseRenderPass(false)
 {
-	PipelineType = PT_Graphics;
-	m_UseRenderPass = false;
 	ContextCounter++;
-	VkCommandPoolCreateInfo cmd_pool_info = {};
-	cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cmd_pool_info.pNext = NULL;
-	cmd_pool_info.queueFamilyIndex = Factory->QueueFamilyIndex;
-	cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-	V_CHK(vkCreateCommandPool(Factory->Device, &cmd_pool_info, NULL, &CommandPool));
+	VkCommandPoolCreateInfo CommandPoolCreateInfo = {};
+	CommandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	CommandPoolCreateInfo.pNext = NULL;
+	CommandPoolCreateInfo.queueFamilyIndex = Factory->QueueFamilyIndex;
+	CommandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	m_CommandPool = 0;
+	V_CHK(vkCreateCommandPool(Factory->Device, &CommandPoolCreateInfo, NULL, &m_CommandPool));
 
 
-	VkCommandBufferAllocateInfo cmd = {};
-	cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	cmd.pNext = NULL;
-	cmd.commandPool = CommandPool;
-	cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	cmd.commandBufferCount = 1;
+	VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {};
+	CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	CommandBufferAllocateInfo.pNext = NULL;
+	CommandBufferAllocateInfo.commandPool = m_CommandPool;
+	CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	CommandBufferAllocateInfo.commandBufferCount = 1;
 
-	V_CHK(vkAllocateCommandBuffers(Factory->Device, &cmd, &CommandBuffer));
-//	vkFreeCommandBuffers
-	VkFenceCreateInfo info = {};
-	info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	V_CHK(vkCreateFence(Factory->Device, &info, nullptr, &Fence));
-	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
-	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
-	VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-	imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	imageAcquiredSemaphoreCreateInfo.pNext = NULL;
-	imageAcquiredSemaphoreCreateInfo.flags = 0;
+	V_CHK(vkAllocateCommandBuffers(Factory->Device, &CommandBufferAllocateInfo, &m_CommandBuffer));
 
-	V_CHK(vkCreateSemaphore(Factory->Device, &imageAcquiredSemaphoreCreateInfo, NULL, &SemaphoreWait));
+
+	VkFenceCreateInfo FenceCreateInfo = {};
+	FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	FenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	V_CHK(vkCreateFence(Factory->Device, &FenceCreateInfo, nullptr, &m_Fence));
+	V_CHK(vkWaitForFences(Factory->Device, 1, &m_Fence, true, UINT64_MAX));
+	V_CHK(vkResetFences(Factory->Device, 1, &m_Fence));
+
+	VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
+	SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	SemaphoreCreateInfo.pNext = NULL;
+	SemaphoreCreateInfo.flags = 0;
+
+	V_CHK(vkCreateSemaphore(Factory->Device, &SemaphoreCreateInfo, NULL, &m_SemaphoreWait));
 
 
 }
 VKContext::~VKContext()
 {
-	vkDestroySemaphore(Factory->Device, SemaphoreWait, 0);
-	vkDestroyFence(Factory->Device,Fence,0);
-	VkCommandBuffer cmd_bufs[1] = { CommandBuffer };
-	vkFreeCommandBuffers(Factory->Device, CommandPool, 1, cmd_bufs);
-	vkDestroyCommandPool(Factory->Device, CommandPool, NULL);
+	vkDestroySemaphore(Factory->Device, m_SemaphoreWait, 0);
+	vkDestroyFence(Factory->Device,m_Fence,0);
+	vkFreeCommandBuffers(Factory->Device, m_CommandPool, 1, &m_CommandBuffer);
+	vkDestroyCommandPool(Factory->Device, m_CommandPool, NULL);
 	ContextCounter--;
 }
 
 void VKContext::Reset()
 {
 	m_UseRenderPass = false;
-	VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo;
+	VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo = {};
 	{
 		CommandBufferInheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
 		CommandBufferInheritanceInfo.pNext = nullptr;
@@ -66,151 +67,167 @@ void VKContext::Reset()
 		CommandBufferInheritanceInfo.queryFlags = 0;
 		CommandBufferInheritanceInfo.pipelineStatistics = 0;
 	}
-	VkCommandBufferBeginInfo CommandBufferBeginInfo;
+	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
 	{
 		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		CommandBufferBeginInfo.pNext = nullptr;
 		CommandBufferBeginInfo.flags = 0;
 		CommandBufferBeginInfo.pInheritanceInfo = &CommandBufferInheritanceInfo;
 	}
-	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+	V_CHK(vkBeginCommandBuffer(m_CommandBuffer, &CommandBufferBeginInfo));
 }
 void VKContext::Wait()
 {
-	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
-	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
+	V_CHK(vkWaitForFences(Factory->Device, 1, &m_Fence, true, UINT64_MAX));
+	V_CHK(vkResetFences(Factory->Device, 1, &m_Fence));
 }
-void VKContext::Flush(BearFactoryPointer<BearRHI::BearRHIViewport> Viewport, bool wait)
+void VKContext::Flush(BearFactoryPointer<BearRHI::BearRHIViewport> viewport, bool wait)
 {
-	static VkPipelineStageFlags stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-	if (m_UseRenderPass)vkCmdEndRenderPass(CommandBuffer);
-	V_CHK(vkEndCommandBuffer(CommandBuffer));
-	auto viewport = static_cast<VKViewport*>(Viewport.get());
-	VkSubmitInfo submit_info = {};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.waitSemaphoreCount = 0;
-	submit_info.pWaitSemaphores = 0;
-	submit_info.signalSemaphoreCount = 0;
-	submit_info.pSignalSemaphores = &viewport->Semaphore;// &buf.acquire_semaphore;
-	submit_info.pWaitDstStageMask = &stage;
-	submit_info.pCommandBuffers = &CommandBuffer;
-	submit_info.commandBufferCount = 1;
-	V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
-	viewport->Swap();
+	static VkPipelineStageFlags Stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+	{
+		if (m_UseRenderPass)
+			vkCmdEndRenderPass(m_CommandBuffer);
+		m_UseRenderPass = false;
+	}
+
+	V_CHK(vkEndCommandBuffer(m_CommandBuffer));
+	auto Viewport = static_cast<VKViewport*>(viewport.get());
+
+	VkSubmitInfo SubmitInfo = {};
+	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	SubmitInfo.waitSemaphoreCount = 0;
+	SubmitInfo.pWaitSemaphores = 0;
+	SubmitInfo.signalSemaphoreCount = 0;
+	SubmitInfo.pSignalSemaphores = &Viewport->Semaphore;
+	SubmitInfo.pWaitDstStageMask = &Stage;
+	SubmitInfo.pCommandBuffers = &m_CommandBuffer;
+	SubmitInfo.commandBufferCount = 1;
+	V_CHK(vkQueueSubmit(Factory->Queue, 1, &SubmitInfo, m_Fence));
+
+	Viewport->Swap();
 	if (wait)Wait();
 }
 void VKContext::Flush(bool wait)
 {
+	static VkPipelineStageFlags Stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-	static VkPipelineStageFlags stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-	if(m_UseRenderPass)vkCmdEndRenderPass(CommandBuffer);
-	V_CHK(vkEndCommandBuffer(CommandBuffer));
-	/**/
-	VkSubmitInfo submit_info = {};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.waitSemaphoreCount = 0;
-	submit_info.pWaitSemaphores = 0;
-	submit_info.signalSemaphoreCount = 0;
-	submit_info.pSignalSemaphores = 0;// &buf.acquire_semaphore;
-	submit_info.pWaitDstStageMask = &stage;
-	submit_info.pCommandBuffers = &CommandBuffer;
-	submit_info.commandBufferCount = 1;
-	V_CHK(vkQueueSubmit(Factory->Queue, 1, &submit_info, Fence));
+	{
+		if (m_UseRenderPass)
+			vkCmdEndRenderPass(m_CommandBuffer);
+		m_UseRenderPass = false;
+	}
+
+	V_CHK(vkEndCommandBuffer(m_CommandBuffer));
+
+	VkSubmitInfo SubmitInfo = {};
+	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	SubmitInfo.waitSemaphoreCount = 0;
+	SubmitInfo.pWaitSemaphores = 0;
+	SubmitInfo.signalSemaphoreCount = 0;
+	SubmitInfo.pSignalSemaphores = 0;
+	SubmitInfo.pWaitDstStageMask = &Stage;
+	SubmitInfo.pCommandBuffers = &m_CommandBuffer;
+	SubmitInfo.commandBufferCount = 1;
+	V_CHK(vkQueueSubmit(Factory->Queue, 1, &SubmitInfo, m_Fence));
 
 	if (wait)Wait();
 }
 
-void VKContext::ClearState()
+void VKContext::ClearFrameBuffer()
 {
 	if(m_UseRenderPass)
-	vkCmdEndRenderPass(CommandBuffer);
+		vkCmdEndRenderPass(m_CommandBuffer);
 	m_UseRenderPass = false;
 }
 
 void VKContext::BeginEvent(char const* name, BearColor color)
 {
+#ifdef DEVELOPER_VERSION
 	if (GDebugRender)
 	{
-		VkDebugUtilsLabelEXT Info = {};
-		Info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-		Info.pLabelName = name;
-		memcpy(Info.color, color.R32G32B32A32, sizeof(float) * 4);
-		CmdBeginDebugUtilsLabelEXT(CommandBuffer, &Info);
+		VkDebugUtilsLabelEXT DebugUtilsLabelEXT = {};
+		DebugUtilsLabelEXT.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+		DebugUtilsLabelEXT.pLabelName = name;
+		memcpy(DebugUtilsLabelEXT.color, color.R32G32B32A32, sizeof(float) * 4);
+		vkCmdBeginDebugUtilsLabelEXT(m_CommandBuffer, &DebugUtilsLabelEXT);
 	}
-
+#endif
 }
 void VKContext::EndEvent()
 {
+#ifdef DEVELOPER_VERSION
 	if (GDebugRender)
 	{
-		CmdEndDebugUtilsLabelEXT(CommandBuffer);
+		vkCmdEndDebugUtilsLabelEXT(m_CommandBuffer);
 	}
+#endif
 }
 
 
 
-void VKContext::SetViewportAsFrameBuffer(BearFactoryPointer<BearRHI::BearRHIViewport> Viewport)
+void VKContext::SetViewportAsFrameBuffer(BearFactoryPointer<BearRHI::BearRHIViewport> viewport)
 {
-	if (m_UseRenderPass)vkCmdEndRenderPass(CommandBuffer);
-	VkRenderPassBeginInfo RenderPassBeginInfo = static_cast<VKViewport*>(Viewport.get())->GetRenderPass();
-	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	if (m_UseRenderPass)vkCmdEndRenderPass(m_CommandBuffer);
+	VkRenderPassBeginInfo RenderPassBeginInfo = static_cast<VKViewport*>(viewport.get())->GetRenderPass();
+	vkCmdBeginRenderPass(m_CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	m_UseRenderPass = true;
 }
-void VKContext::SetFrameBuffer(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> FrameBuffer)
+void VKContext::SetFrameBuffer(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> frame_buffer)
 {
-	if (m_UseRenderPass)vkCmdEndRenderPass(CommandBuffer);
-	VkRenderPassBeginInfo RenderPassBeginInfo = static_cast<VKFrameBuffer*>(FrameBuffer.get())->GetRenderPass();
-	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	if (m_UseRenderPass)vkCmdEndRenderPass(m_CommandBuffer);
+	VkRenderPassBeginInfo RenderPassBeginInfo = static_cast<VKFrameBuffer*>(frame_buffer.get())->GetRenderPass();
+	vkCmdBeginRenderPass(m_CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	m_UseRenderPass = true;
 }
-void VKContext::SetPipeline(BearFactoryPointer<BearRHI::BearRHIPipeline> Pipeline)
+void VKContext::SetPipeline(BearFactoryPointer<BearRHI::BearRHIPipeline> pipeline)
 {
-	VKPipeline* P = reinterpret_cast<VKPipeline*>(Pipeline.get()->QueryInterface(VKQ_Pipeline));
-	BEAR_CHECK(P);
-	P->Set(CommandBuffer);
-	PipelineType = P->GetType();
+	VKPipeline* Pipeline = reinterpret_cast<VKPipeline*>(pipeline.get()->QueryInterface(VKQ_Pipeline));
+	BEAR_CHECK(Pipeline);
+	Pipeline->Set(m_CommandBuffer);
+	m_PipelineType = Pipeline->GetType();
 }
-void VKContext::SetDescriptorHeap(BearFactoryPointer<BearRHI::BearRHIDescriptorHeap> DescriptorHeap)
+void VKContext::SetDescriptorHeap(BearFactoryPointer<BearRHI::BearRHIDescriptorHeap> descriptor_heap)
 {
-	switch (PipelineType)
+	switch (m_PipelineType)
 	{
-	case PT_RayTracing:
-		static_cast<VKDescriptorHeap*>(DescriptorHeap.get())->SetRayTracing(CommandBuffer);
+	case BearPipelineType::RayTracing:
+		static_cast<VKDescriptorHeap*>(descriptor_heap.get())->SetRayTracing(m_CommandBuffer);
 		break;
 	default:
-		static_cast<VKDescriptorHeap*>(DescriptorHeap.get())->SetGraphics(CommandBuffer);
+		static_cast<VKDescriptorHeap*>(descriptor_heap.get())->SetGraphics(m_CommandBuffer);
 		break;
 	}
 
 }
 void VKContext::SetVertexBuffer(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> buffer)
 {
-	VkDeviceSize offset = 0;
-	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &static_cast<VKVertexBuffer*>(buffer.get())->Buffer, &offset);
+	static VkDeviceSize Offset = 0;
+	vkCmdBindVertexBuffers(m_CommandBuffer, 0, 1, &static_cast<VKVertexBuffer*>(buffer.get())->Buffer, &Offset);
 }
 void VKContext::SetIndexBuffer(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> buffer)
 {
-	vkCmdBindIndexBuffer(CommandBuffer, static_cast<VKIndexBuffer*>(buffer.get())->Buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+	vkCmdBindIndexBuffer(m_CommandBuffer, static_cast<VKIndexBuffer*>(buffer.get())->Buffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
 }
 void VKContext::SetStencilRef(uint32 ref)
 {
-	vkCmdSetStencilReference(CommandBuffer, VK_STENCIL_FRONT_AND_BACK, ref);
+	vkCmdSetStencilReference(m_CommandBuffer, VK_STENCIL_FRONT_AND_BACK, ref);
 }
-void VKContext::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
+void VKContext::SetViewport(float x, float y, float width, float height, float min_depth, float max_depth)
 {
-	Viewport.x = x;
-	Viewport.y = height - y;
-	Viewport.width = width;
-	Viewport.height = -height;
-	Viewport.maxDepth = maxDepth;
-	Viewport.minDepth = minDepth;
-	vkCmdSetViewport(CommandBuffer, 0, 1, &Viewport);
+	m_Viewport.x = x;
+	m_Viewport.y = height - y;
+	m_Viewport.width = width;
+	m_Viewport.height = -height;
+	m_Viewport.maxDepth = max_depth;
+	m_Viewport.minDepth = min_depth;
+	vkCmdSetViewport(m_CommandBuffer, 0, 1, &m_Viewport);
 }
-void VKContext::SetScissor(bool Enable, float x, float y, float x1, float y1)
+void VKContext::SetScissor(bool enable, float x, float y, float x1, float y1)
 {
-	VkRect2D Scissor;
+	VkRect2D Scissor = {};
 
-	if (Enable)
+	if (enable)
 	{
 		Scissor.offset.x = static_cast<int>(x);
 		Scissor.offset.y = static_cast<int>(y);
@@ -219,154 +236,145 @@ void VKContext::SetScissor(bool Enable, float x, float y, float x1, float y1)
 	}
 	else
 	{
-		Scissor.offset.x = static_cast<int>(Viewport.x);
-		Scissor.offset.y = static_cast<int>(Viewport.height) + static_cast<int>(Viewport.y);
-		Scissor.extent.width = static_cast<uint32>(Viewport.width);
-		Scissor.extent.height = static_cast<uint32>(abs(Viewport.height));
+		Scissor.offset.x = static_cast<int>(m_Viewport.x);
+		Scissor.offset.y = static_cast<int>(m_Viewport.height) + static_cast<int>(m_Viewport.y);
+		Scissor.extent.width = static_cast<uint32>(m_Viewport.width);
+		Scissor.extent.height = static_cast<uint32>(abs(m_Viewport.height));
 	}
 
-	vkCmdSetScissor(CommandBuffer, 0, 1, &Scissor);
+	vkCmdSetScissor(m_CommandBuffer, 0, 1, &Scissor);
 }
 void VKContext::Draw(size_t count, size_t offset)
 {
-	vkCmdDraw(CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset), 0);
+	vkCmdDraw(m_CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset), 0);
 }
 void VKContext::DrawIndex(size_t count, size_t  offset_index, size_t offset_vertex)
 {
-	vkCmdDrawIndexed(CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset_index), static_cast<uint32>(offset_vertex), 0);
+	vkCmdDrawIndexed(m_CommandBuffer, static_cast<uint32>(count), 1, static_cast<uint32>(offset_index), static_cast<uint32>(offset_vertex), 0);
 }
 
-void VKContext::DispatchMesh(size_t CountX, size_t CountY, size_t CountZ)
+void VKContext::DispatchMesh(size_t count_x, size_t count_y, size_t count_z)
 {
 }
 
-void VKContext::DispatchRays(const BearDispatchRaysDescription& Description)
+void VKContext::DispatchRays(bsize count_x, bsize count_y, bsize count_z, BearFactoryPointer<BearRHI::BearRHIRayTracingShaderTable> shader_table)
 {
 #ifdef RTX
-	auto* RayGenerationTable = static_cast<const VKRayTracingShaderTable*>(Description.RayGeneration.get());
-	auto* MissTable = static_cast<const VKRayTracingShaderTable*>(Description.Miss.get());
-	auto* HitGroupTable = static_cast<const VKRayTracingShaderTable*>(Description.HitGroup.get());
-	vkCmdTraceRaysNV(CommandBuffer, RayGenerationTable->Buffer, 0, MissTable->Buffer, 0, MissTable->Size, HitGroupTable->Buffer, 0, HitGroupTable->Size, VK_NULL_HANDLE, 0, 0, Description.Width, Description.Height, Description.Depth);
+	auto* ShaderTable = static_cast<const VKRayTracingShaderTable*>(shader_table.get());
+	vkCmdTraceRaysNV(m_CommandBuffer, ShaderTable->RayGenerateRecord.Buffer, 0, ShaderTable->MissRecord.Buffer, 0, ShaderTable->MissRecord.Stride, ShaderTable->HitGroups.Buffer, 0, ShaderTable->HitGroups.Stride, ShaderTable->CallableRecord.Buffer, 0, ShaderTable->CallableRecord.Stride, count_x, count_y, count_z);
 #endif
 }
 
 
-
-void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIIndexBuffer> Src)
+void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIIndexBuffer> dest, BearFactoryPointer<BearRHI::BearRHIIndexBuffer> source)
 {
-	if (Dst.empty() || Src.empty())return;
-	if (static_cast<VKIndexBuffer*>(Dst.get())->Buffer == 0)return;
-	if (static_cast<VKIndexBuffer*>(Src.get())->Buffer == 0)return;
+	if (dest.empty() || source.empty())return;
+	if (static_cast<VKIndexBuffer*>(dest.get())->Buffer == 0)return;
+	if (static_cast<VKIndexBuffer*>(source.get())->Buffer == 0)return;
 	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
 	{
 		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	}
-	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
-
-	CopyBuffer(CommandBuffer, static_cast<VKIndexBuffer*>(Src.get())->Buffer, static_cast<VKIndexBuffer*>(Dst.get())->Buffer, static_cast<VKIndexBuffer*>(Dst.get())->Size);
+	V_CHK(vkBeginCommandBuffer(m_CommandBuffer, &CommandBufferBeginInfo));
+	CopyBuffer(m_CommandBuffer, static_cast<VKIndexBuffer*>(source.get())->Buffer, static_cast<VKIndexBuffer*>(dest.get())->Buffer, static_cast<VKIndexBuffer*>(dest.get())->Size);
 }
-void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIVertexBuffer> Src)
+void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIVertexBuffer> dest, BearFactoryPointer<BearRHI::BearRHIVertexBuffer> source)
 {
-	if (Dst.empty() || Src.empty())return;
-	if (static_cast<VKVertexBuffer*>(Dst.get())->Buffer == 0)return;
+	if (dest.empty() || source.empty())return;
+	if (static_cast<VKVertexBuffer*>(dest.get())->Buffer == 0)return;
 
-	if (static_cast<VKVertexBuffer*>(Src.get())->Buffer == 0)return;
+	if (static_cast<VKVertexBuffer*>(source.get())->Buffer == 0)return;
 	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
-	{
-		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	}
-	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
-	CopyBuffer(CommandBuffer, static_cast<VKVertexBuffer*>(Src.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Buffer, static_cast<VKVertexBuffer*>(Dst.get())->Size);
+	CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	V_CHK(vkBeginCommandBuffer(m_CommandBuffer, &CommandBufferBeginInfo));
+	CopyBuffer(m_CommandBuffer, static_cast<VKVertexBuffer*>(source.get())->Buffer, static_cast<VKVertexBuffer*>(dest.get())->Buffer, static_cast<VKVertexBuffer*>(dest.get())->Size);
 }
-void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHITexture2D> Dst, BearFactoryPointer<BearRHI::BearRHITexture2D> Src)
+
+void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHITexture2D> dest, BearFactoryPointer<BearRHI::BearRHITexture2D> source)
 {
-	if (Dst.empty() || Src.empty())return;
-	if (static_cast<VKTexture2D*>(Dst.get())->Image == 0)return;
+	if (dest.empty() || source.empty())return;
+	if (static_cast<VKTexture2D*>(dest.get())->Image == 0)return;
 
-	if (static_cast<VKTexture2D*>(Src.get())->Image == 0)return;
-	auto dst = static_cast<VKTexture2D*>(Dst.get());
-	auto src = static_cast<VKTexture2D*>(Src.get());
+	if (static_cast<VKTexture2D*>(source.get())->Image == 0)return;
+	auto Dest = static_cast<VKTexture2D*>(dest.get());
+	auto Source = static_cast<VKTexture2D*>(source.get());
 
 
-	if (src->ImageInfo.extent.width != dst->ImageInfo.extent.width)return;
-	if (src->ImageInfo.extent.height != dst->ImageInfo.extent.height)return;;
-	if (src->ImageInfo.arrayLayers != dst->ImageInfo.arrayLayers)return;;
-	if (dst->ImageInfo.mipLevels != 1)
-		if (src->ImageInfo.mipLevels != dst->ImageInfo.mipLevels)return;
+	if (Source->ImageCreateInfo.extent.width != Dest->ImageCreateInfo.extent.width)return;
+	if (Source->ImageCreateInfo.extent.height != Dest->ImageCreateInfo.extent.height)return;;
+	if (Source->ImageCreateInfo.arrayLayers != Dest->ImageCreateInfo.arrayLayers)return;;
+	if (Dest->ImageCreateInfo.mipLevels != 1)
+		if (Source->ImageCreateInfo.mipLevels != Dest->ImageCreateInfo.mipLevels)return;
 
 	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
-	{
-		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	}
-	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+	CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	V_CHK(vkBeginCommandBuffer(m_CommandBuffer, &CommandBufferBeginInfo));
 	{
 
-		TransitionImageLayout(CommandBuffer, dst->Image, dst->ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst->ImageInfo.mipLevels, dst->ImageInfo.arrayLayers, 0);
-		TransitionImageLayout(CommandBuffer, src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src->ImageInfo.mipLevels, src->ImageInfo.arrayLayers, 0);
+		TransitionImageLayout(m_CommandBuffer, Dest->Image, Dest->ImageCreateInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Dest->ImageCreateInfo.mipLevels, Dest->ImageCreateInfo.arrayLayers, 0);
+		TransitionImageLayout(m_CommandBuffer, Source->Image, Source->ImageCreateInfo.format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Source->ImageCreateInfo.mipLevels, Source->ImageCreateInfo.arrayLayers, 0);
 
-		for (uint32_t i = 0; i < dst->ImageInfo.mipLevels; i++)
+		for (uint32_t i = 0; i < Dest->ImageCreateInfo.mipLevels; i++)
 		{
-			VkImageCopy imgc = {};
-			imgc.extent.width = dst->ImageInfo.extent.width;
-			imgc.extent.height = dst->ImageInfo.extent.height;
-			imgc.extent.depth = dst->ImageInfo.arrayLayers;
-			imgc.dstSubresource.mipLevel = i;
-			imgc.srcSubresource.mipLevel = i;
-			vkCmdCopyImage(CommandBuffer, src->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imgc);
+			VkImageCopy ImageCopy = {};
+			ImageCopy.extent.width = Dest->ImageCreateInfo.extent.width;
+			ImageCopy.extent.height = Dest->ImageCreateInfo.extent.height;
+			ImageCopy.extent.depth = Dest->ImageCreateInfo.arrayLayers;
+			ImageCopy.dstSubresource.mipLevel = i;
+			ImageCopy.srcSubresource.mipLevel = i;
+			vkCmdCopyImage(m_CommandBuffer, Source->Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Dest->Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &ImageCopy);
 		}
-		TransitionImageLayout(CommandBuffer, dst->Image, dst->ImageInfo.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst->ImageInfo.initialLayout, dst->ImageInfo.mipLevels, dst->ImageInfo.arrayLayers, 0);
-		TransitionImageLayout(CommandBuffer, src->Image, src->ImageInfo.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src->ImageInfo.initialLayout, src->ImageInfo.mipLevels, src->ImageInfo.arrayLayers, 0);
+		TransitionImageLayout(m_CommandBuffer, Dest->Image, Dest->ImageCreateInfo.format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, Dest->ImageCreateInfo.initialLayout, Dest->ImageCreateInfo.mipLevels, Dest->ImageCreateInfo.arrayLayers, 0);
+		TransitionImageLayout(m_CommandBuffer, Source->Image, Source->ImageCreateInfo.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Source->ImageCreateInfo.initialLayout, Source->ImageCreateInfo.mipLevels, Source->ImageCreateInfo.arrayLayers, 0);
 	}
 
 }
-void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Dst, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> Src)
+void VKContext::Copy(BearFactoryPointer<BearRHI::BearRHIUniformBuffer> dest, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> source)
 {
-	if (Dst.empty() || Src.empty())return;
-	if (static_cast<VKUniformBuffer*>(Dst.get())->Buffer == 0)return;
+	if (dest.empty() || source.empty())return;
+	if (static_cast<VKUniformBuffer*>(dest.get())->Buffer == 0)return;
+	if (static_cast<VKUniformBuffer*>(source.get())->Buffer == 0)return;
 
-	if (static_cast<VKUniformBuffer*>(Src.get())->Buffer == 0)return;
 	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
-	{
-		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	}
-	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+	CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	V_CHK(vkBeginCommandBuffer(m_CommandBuffer, &CommandBufferBeginInfo));
 
-	CopyBuffer(CommandBuffer, static_cast<VKUniformBuffer*>(Src.get())->Buffer, static_cast<VKUniformBuffer*>(Dst.get())->Buffer, static_cast<VKUniformBuffer*>(Dst.get())->Count* static_cast<VKUniformBuffer*>(Dst.get())->Stride);
+	CopyBuffer(m_CommandBuffer, static_cast<VKUniformBuffer*>(source.get())->Buffer, static_cast<VKUniformBuffer*>(dest.get())->Buffer, static_cast<VKUniformBuffer*>(dest.get())->Count * static_cast<VKUniformBuffer*>(dest.get())->Stride);
 
 }
 
-void VKContext::Lock(BearFactoryPointer<BearRHI::BearRHIViewport> Viewport)
+void VKContext::Lock(BearFactoryPointer<BearRHI::BearRHIViewport> viewport)
 {
 }
 
-void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIViewport> Viewport)
+void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIViewport> viewport)
 {
 }
 
-void VKContext::Lock(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> Framebuffer)
+void VKContext::Lock(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> frame_buffer)
 {
-	BEAR_CHECK(!Framebuffer.empty());
-	static_cast<VKFrameBuffer*>(Framebuffer.get())->Lock(CommandBuffer);
+	BEAR_CHECK(!frame_buffer.empty());
+	static_cast<VKFrameBuffer*>(frame_buffer.get())->Lock(m_CommandBuffer);
 }
 
-void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> Framebuffer)
+void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIFrameBuffer> frame_buffer)
 {
-	BEAR_CHECK(!Framebuffer.empty());
-	static_cast<VKFrameBuffer*>(Framebuffer.get())->Unlock(CommandBuffer);
+	BEAR_CHECK(!frame_buffer.empty());
+	static_cast<VKFrameBuffer*>(frame_buffer.get())->Unlock(m_CommandBuffer);
 }
-void VKContext::Lock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAccess)
+void VKContext::Lock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> unordered_access)
 {
-	BEAR_CHECK(!UnorderedAccess.empty());
-	VKUnorderedAccess* UAV = reinterpret_cast<VKUnorderedAccess*>(UnorderedAccess.get()->QueryInterface(VKQ_UnorderedAccess));
-	UAV->LockUAV(CommandBuffer);
+	BEAR_CHECK(!unordered_access.empty());
+	VKUnorderedAccess* UAV = reinterpret_cast<VKUnorderedAccess*>(unordered_access.get()->QueryInterface(VKQ_UnorderedAccess));
+	UAV->LockUAV(m_CommandBuffer);
 }
-void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAccess)
+void VKContext::Unlock(BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> unordered_access)
 {
-	BEAR_CHECK(!UnorderedAccess.empty());
-	VKUnorderedAccess* UAV = reinterpret_cast<VKUnorderedAccess*>(UnorderedAccess.get()->QueryInterface(VKQ_UnorderedAccess));
-	UAV->UnlockUAV(CommandBuffer);
+	BEAR_CHECK(!unordered_access.empty());
+	VKUnorderedAccess* UAV = reinterpret_cast<VKUnorderedAccess*>(unordered_access.get()->QueryInterface(VKQ_UnorderedAccess));
+	UAV->UnlockUAV(m_CommandBuffer);
 }

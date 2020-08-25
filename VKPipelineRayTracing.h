@@ -3,10 +3,10 @@ class VKPipelineRayTracing :public BearRHI::BearRHIPipelineRayTracing,public VKP
 {
 	//BEAR_CLASS_WITHOUT_COPY(VKPipelineGraphics);
 public:
-	VKPipelineRayTracing(const BearPipelineRayTracingDescription&desc);
+	VKPipelineRayTracing(const BearPipelineRayTracingDescription& description);
 	virtual ~VKPipelineRayTracing();
-	virtual void Set(VkCommandBuffer CommandBuffer);
-	virtual void* QueryInterface(int Type);
+	virtual void Set(VkCommandBuffer command_buffer);
+	virtual void* QueryInterface(int type);
 	virtual BearPipelineType GetType();
 	void* GetShaderIdentifier(BearStringConteniarUnicode name);
 #ifdef RTX

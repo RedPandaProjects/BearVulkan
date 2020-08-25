@@ -3,12 +3,12 @@ class VKDescriptorHeap :public BearRHI::BearRHIDescriptorHeap
 {
 	//BEAR_CLASS_WITHOUT_COPY(VKDescriptorHeap);
 public:
-	VKDescriptorHeap(const BearDescriptorHeapDescription& desc);
+	VKDescriptorHeap(const BearDescriptorHeapDescription& description);
 	virtual ~VKDescriptorHeap();
-	virtual void SetUniformBuffer(size_t slot, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> UniformBuffer, size_t offset = 0);
-	virtual	void SetShaderResource(size_t slot, BearFactoryPointer<BearRHI::BearRHIShaderResource> ShaderResource, size_t offset = 0);
-	virtual	void SetSampler(size_t slot, BearFactoryPointer<BearRHI::BearRHISampler> Sampler);
-	virtual void SetUnorderedAccess(bsize slot, BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAccess, bsize offset = 0);
+	virtual void SetUniformBuffer(size_t slot, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> uniform_buffer, size_t offset = 0);
+	virtual	void SetShaderResource(size_t slot, BearFactoryPointer<BearRHI::BearRHIShaderResource> shader_resource, size_t offset = 0);
+	virtual	void SetSampler(size_t slot, BearFactoryPointer<BearRHI::BearRHISampler> sampler);
+	virtual void SetUnorderedAccess(bsize slot, BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> unordered_access, bsize offset = 0);
 
 	VkDescriptorSet DescriptorSet;
 	BearFactoryPointer<BearRHI::BearRHIRootSignature> RootSignature;
@@ -34,6 +34,6 @@ public:
 	size_t SlotSamplers[16];
 	size_t SlotUAVs[16];
 
-	void SetGraphics(VkCommandBuffer  CommandLine);
-	void SetRayTracing(VkCommandBuffer  CommandLine);
+	void SetGraphics(VkCommandBuffer  command_line);
+	void SetRayTracing(VkCommandBuffer  command_line);
 };

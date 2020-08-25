@@ -3,11 +3,11 @@ class VKViewport :public BearRHI::BearRHIViewport
 {
 public:
 	//BEAR_CLASS_WITHOUT_COPY(VKViewport);
-	VKViewport(void * Handle, size_t Width, size_t Height, bool Fullscreen, bool VSync, const BearViewportDescription&Description);
+	VKViewport(void * handle, size_t width, size_t height, bool fullscreen, bool vsync, const BearViewportDescription&description);
 	virtual ~VKViewport();
-	virtual void SetVSync(bool Sync);
-	virtual void SetFullScreen(bool FullScreen);
-	virtual void Resize(size_t Width, size_t Height);
+	virtual void SetVSync(bool sync);
+	virtual void SetFullScreen(bool fullscreen);
+	virtual void Resize(size_t width, size_t height);
 	void Swap();
 	virtual BearRenderTargetFormat GetFormat();
 	VkSemaphore Semaphore;
@@ -39,18 +39,18 @@ private:
 	};
 	VkClearValue m_ClearValues[1];
 	SwapChainSupportDetails QuerySwapChainSupport();
-	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const BearVector<VkSurfaceFormatKHR>& availableFormats);
-	VkPresentModeKHR ChooseSwapPresentMode(const BearVector<VkPresentModeKHR>& availablePresentModes,bool vsync);
-	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, size_t Width, size_t Height);
+	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const BearVector<VkSurfaceFormatKHR>& available_formats);
+	VkPresentModeKHR ChooseSwapPresentMode(const BearVector<VkPresentModeKHR>& available_present_modes,bool vsync);
+	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, size_t width, size_t height);
 	VkSurfaceKHR Surface;
 
 
 	uint32_t FindQueueFamilies();
 
-	void CreateSwapChain(size_t Width, size_t Height,bool vsync);
+	void CreateSwapChain(size_t width, size_t height,bool vsync);
 	void CreateImageView();
 	void DestroyImageView();
-	void DestroySwapChain(VkSwapchainKHR swapChain);
+	void DestroySwapChain(VkSwapchainKHR swap_chain);
 	void CreateFrameBuffers();
 	void DestroyFrameBuffers();
 	bool m_FullScreen;

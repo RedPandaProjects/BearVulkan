@@ -27,7 +27,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\VKBottomLevel.cpp" />
+    <ClCompile Include="..\..\VKRayTracingBottomLevel.cpp" />
     <ClCompile Include="..\..\VKContext.cpp" />
     <ClCompile Include="..\..\VKDescriptorHeap.cpp" />
     <ClCompile Include="..\..\VKFactory.cpp" />
@@ -55,13 +55,13 @@
     <ClCompile Include="..\..\VKStructuredBuffer.cpp" />
     <ClCompile Include="..\..\VKTexture2D.cpp" />
     <ClCompile Include="..\..\VKTextureCube.cpp" />
-    <ClCompile Include="..\..\VKTopLevel.cpp" />
+    <ClCompile Include="..\..\VKRayTracingTopLevel.cpp" />
     <ClCompile Include="..\..\VKUniformBuffer.cpp" />
     <ClCompile Include="..\..\VKVertexBuffer.cpp" />
     <ClCompile Include="..\..\VKViewport.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\VKBottomLevel.h" />
+    <ClInclude Include="..\..\VKRayTracingBottomLevel.h" />
     <ClInclude Include="..\..\VKBufferTools.h" />
     <ClInclude Include="..\..\VKContext.h" />
     <ClInclude Include="..\..\VKDescriptorHeap.h" />
@@ -84,7 +84,7 @@
     <ClInclude Include="..\..\VKStructuredBuffer.h" />
     <ClInclude Include="..\..\VKTexture2D.h" />
     <ClInclude Include="..\..\VKTextureCube.h" />
-    <ClInclude Include="..\..\VKTopLevel.h" />
+    <ClInclude Include="..\..\VKRayTracingTopLevel.h" />
     <ClInclude Include="..\..\VKUniformBuffer.h" />
     <ClInclude Include="..\..\VKUnorderedAccess.h" />
     <ClInclude Include="..\..\VKVertexBuffer.h" />
@@ -210,7 +210,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
@@ -228,7 +228,7 @@ XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Comma
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
@@ -250,12 +250,11 @@ XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Comma
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
-XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
-XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Development|Win32'">
@@ -272,7 +271,7 @@ XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Comma
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
@@ -294,12 +293,11 @@ XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Comma
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y
-XCOPY $(RenderExternal)Libraries\$(Platform)\dxil.dll $(OutDir)  /Y
-XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Development|x64'">
@@ -316,7 +314,7 @@ XCOPY $(RenderExternal)Libraries\$(Platform)\dxcompiler.dll $(OutDir)  /Y</Comma
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>vulkan-1.lib;shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>shaderc_shared.lib;dxcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>XCOPY $(RenderExternal)Libraries\$(Platform)\shaderc_shared.dll $(OutDir)  /Y

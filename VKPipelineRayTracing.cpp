@@ -1,7 +1,7 @@
 #include "VKPCH.h"
 size_t PipelineRayTracingCounter = 0;
 #ifdef RTX
-VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescription& desc)
+VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescription& description)
 {
 	PipelineRayTracingCounter++;
 	Pipeline = 0;
@@ -12,38 +12,107 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 
 	BearVector<VkRayTracingShaderGroupCreateInfoNV> GroupList;
 
-	for (const BearPipelineRayTracingDescription::ShaderDescription& i : desc.Shaders)
+	for (const BearPipelineRayTracingDescription::ShaderDescription& i : description.Shaders)
 	{
-
 		auto ShaderLibrary = const_cast<VKShader*>(static_cast<const VKShader*>(i.Shader.get()));
 		BEAR_CHECK(ShaderLibrary);
-		if (ShaderLibrary->IsType(ST_RayGeneration)|| ShaderLibrary->IsType(ST_Miss)|| ShaderLibrary->IsType(ST_Callable))
+		BEAR_CHECK(ShaderLibrary->IsType(BearShaderType::RayTracing));
+		VkPipelineShaderStageCreateInfo Shader = {};
+		for (const BearPipelineRayTracingDescription::ShaderDescription::ExportDescription& a : i.Exports)
 		{
-			VkRayTracingShaderGroupCreateInfoNV GroupInfo;
-			GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
-			GroupInfo.pNext = nullptr;
-			GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV;
-			GroupInfo.generalShader = ShaderList.size();
-			GroupInfo.closestHitShader = VK_SHADER_UNUSED_NV;
-			GroupInfo.anyHitShader = VK_SHADER_UNUSED_NV;
-			GroupInfo.intersectionShader = VK_SHADER_UNUSED_NV;
-			GroupMap[i.NameExport] = GroupList.size();
-			GroupList.emplace_back(GroupInfo);
-		}
-		else
-		{
-			if (!ShaderLibrary->IsType(ST_Intersection))
-				if (!ShaderLibrary->IsType(ST_AnyHit))
-					if (!ShaderLibrary->IsType(ST_ClosestHit))
-					{
-						BEAR_CHECK(false);
-					}
+			switch (a.Type)
+			{
+			case BearRayTracingShaderType::RayGeneration:
+			{
+				VkRayTracingShaderGroupCreateInfoNV GroupInfo = {};
+				GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
+				GroupInfo.pNext = nullptr;
+				GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+				GroupInfo.generalShader = ShaderList.size();
+				GroupInfo.closestHitShader = VK_SHADER_UNUSED_NV;
+				GroupInfo.anyHitShader = VK_SHADER_UNUSED_NV;
+				GroupInfo.intersectionShader = VK_SHADER_UNUSED_NV;
+				GroupMap[a.NameExport] = GroupList.size();
+				GroupList.emplace_back(GroupInfo);
+				Shader = ShaderLibrary->Shader;
+				Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi( a.NameFunction.size() ? *a.NameFunction : *a.NameExport));
+				Shader.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+				ShaderList.push_back(Shader);
+			}
+				break;
+			case BearRayTracingShaderType::Miss:
+			{
+				VkRayTracingShaderGroupCreateInfoNV GroupInfo = {};
+				GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
+				GroupInfo.pNext = nullptr;
+				GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+				GroupInfo.generalShader = ShaderList.size();
+				GroupInfo.closestHitShader = VK_SHADER_UNUSED_NV;
+				GroupInfo.anyHitShader = VK_SHADER_UNUSED_NV;
+				GroupInfo.intersectionShader = VK_SHADER_UNUSED_NV;
+				GroupMap[a.NameExport] = GroupList.size();
+				GroupList.emplace_back(GroupInfo);
+				Shader = ShaderLibrary->Shader;
+				Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi(a.NameFunction.size() ? *a.NameFunction : *a.NameExport));
+				Shader.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+				ShaderList.push_back(Shader);
+			}
+				break;
+			case BearRayTracingShaderType::Callable:
+			{
+				VkRayTracingShaderGroupCreateInfoNV GroupInfo = {};
+				GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
+				GroupInfo.pNext = nullptr;
+				GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+				GroupInfo.generalShader = ShaderList.size();
+				GroupInfo.closestHitShader = VK_SHADER_UNUSED_NV;
+				GroupInfo.anyHitShader = VK_SHADER_UNUSED_NV;
+				GroupInfo.intersectionShader = VK_SHADER_UNUSED_NV;
+				GroupMap[a.NameExport] = GroupList.size();
+				GroupList.emplace_back(GroupInfo);
+				Shader = ShaderLibrary->Shader;
+				Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi(a.NameFunction.size() ? *a.NameFunction : *a.NameExport));
+				Shader.stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR;
+				ShaderList.push_back(Shader);
+			}
+				break;
+			case BearRayTracingShaderType::Intersection:
+			{
+				Shader = ShaderLibrary->Shader;
+				Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi(a.NameFunction.size() ? *a.NameFunction : *a.NameExport));
+				Shader.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+				ShaderMap[a.NameExport] = ShaderList.size();
+				ShaderList.push_back(Shader);
+			}
+				break;
+			case BearRayTracingShaderType::ClosestHit:
+			{
+				Shader = ShaderLibrary->Shader;
+				Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi(a.NameFunction.size() ? *a.NameFunction : *a.NameExport));
+				Shader.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+				ShaderMap[a.NameExport] = ShaderList.size();
+				ShaderList.push_back(Shader);
+			}
+				break;
+			case BearRayTracingShaderType::AnyHit:
+			{
+				Shader = ShaderLibrary->Shader;
+				Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi(a.NameFunction.size() ? *a.NameFunction : *a.NameExport));
+				Shader.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+				ShaderMap[a.NameExport] = ShaderList.size();
+				ShaderList.push_back(Shader);
+			}
+				break;
+			default:
+				BEAR_CHECK(false);
+				break;
+			}
 
-			ShaderMap[i.NameExport] = ShaderList.size();
-		}		
-		ShaderList.push_back(ShaderLibrary->Shader);
+		}
+	
+
 	}
-	for (const BearPipelineRayTracingDescription::HitGroupDescription& i : desc.HitGroups)
+	for (const BearPipelineRayTracingDescription::HitGroupDescription& i : description.HitGroups)
 	{
 		VkRayTracingShaderGroupCreateInfoNV GroupInfo;
 		GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
@@ -52,10 +121,10 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 		GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV;
 		switch (i.Type)
 		{
-		case HGT_Triangles:
+		case BearHitGroupType::Triangles:
 			GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV;
 			break;
-		case HGT_ProceduralPrimitive:
+		case BearHitGroupType::ProceduralPrimitive:
 			GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV;
 			break;
 		default:
@@ -97,7 +166,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 		GroupList.emplace_back(GroupInfo);
 	}
 
-	RootSignature = desc.GlobalRootSignature;
+	RootSignature = description.GlobalRootSignature;
 	BEAR_CHECK(RootSignature.empty() == false);
 	RootSignaturePointer = static_cast<VKRootSignature*>(RootSignature.get());
 
@@ -109,7 +178,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 	RayPipelineInfo.pStages = ShaderList.data();
 	RayPipelineInfo.groupCount = static_cast<uint32_t>(GroupList.size());
 	RayPipelineInfo.pGroups = GroupList.data();
-	RayPipelineInfo.maxRecursionDepth = static_cast<uint32_t>(desc.PipelineConfig.MaxTraceRecursionDepth);
+	RayPipelineInfo.maxRecursionDepth = static_cast<uint32_t>(description.PipelineConfig.MaxTraceRecursionDepth);
 	RayPipelineInfo.layout = RootSignaturePointer->PipelineLayout;
 	RayPipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	RayPipelineInfo.basePipelineIndex = 0;
@@ -126,14 +195,14 @@ VKPipelineRayTracing::~VKPipelineRayTracing()
 	PipelineRayTracingCounter--;
 }
 
-void VKPipelineRayTracing::Set(VkCommandBuffer CommandBuffer)
+void VKPipelineRayTracing::Set(VkCommandBuffer command_buffer)
 {
-	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Pipeline);
+	vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Pipeline);
 }
 
-void* VKPipelineRayTracing::QueryInterface(int Type)
+void* VKPipelineRayTracing::QueryInterface(int type)
 {
-	switch (Type)
+	switch (type)
 	{
 	case VKQ_Pipeline:
 		return reinterpret_cast<void*>(static_cast<VKPipeline*>(this));
@@ -146,7 +215,7 @@ void* VKPipelineRayTracing::QueryInterface(int Type)
 
 BearPipelineType VKPipelineRayTracing::GetType()
 {
-	return PT_RayTracing;
+	return BearPipelineType::RayTracing;
 }
 
 void* VKPipelineRayTracing::GetShaderIdentifier(BearStringConteniarUnicode name)

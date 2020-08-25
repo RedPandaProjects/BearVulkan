@@ -135,6 +135,7 @@ bool VKFactory::CreateDevice()
 	VkDeviceQueueCreateInfo QueueCreateInfo = {};
 	if (!CreateGPU(QueueCreateInfo.queueFamilyIndex))
 		return false;
+	QueueFamilyIndex = QueueCreateInfo.queueFamilyIndex;
 	static float QueuePriorities[] = { 0 };
 	QueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 	QueueCreateInfo.pNext = NULL;
@@ -150,14 +151,14 @@ bool VKFactory::CreateDevice()
 			uint32_t ExtensionCount = 0;
 			Result = vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, nullptr);
 			if (Result != VK_SUCCESS)return false;
-			AvailableExtensions.resize(0);
+			AvailableExtensions.resize(ExtensionCount);
 			Result = vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &ExtensionCount, AvailableExtensions.data());
 			if (Result != VK_SUCCESS)return false;
 		}
-		if (!FindExtensionProperty(VK_KHR_SWAPCHAIN_EXTENSION_NAME))return false;
-		DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-		if (!FindExtensionProperty(VK_KHR_MAINTENANCE1_EXTENSION_NAME))return false;
-		DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+		if (FindExtensionProperty(VK_KHR_SWAPCHAIN_EXTENSION_NAME))
+			DeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+		if (FindExtensionProperty(VK_KHR_MAINTENANCE1_EXTENSION_NAME))
+			DeviceExtensions.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
 #ifdef RTX
 		if (FindExtensionProperty(VK_NV_RAY_TRACING_EXTENSION_NAME))
 		{
@@ -196,13 +197,12 @@ bool VKFactory::CreateDevice()
 #ifdef DEVELOPER_VERSION
 	if (GDebugRender)
 	{
-		VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo;
-		DebugCreateInfo = {};
+		VkDebugUtilsMessengerCreateInfoEXT DebugCreateInfo = {};
 		DebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		DebugCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
 		DebugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
 		DebugCreateInfo.pfnUserCallback = DebugCallback;
-		V_CHK(vkCreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &DebugMessenger));
+		V_CHK(vkCreateDebugUtilsMessengerEXT(Instance, &DebugCreateInfo, nullptr, &m_DebugMessenger));
 	}
 #endif
 	{
@@ -222,7 +222,7 @@ bool VKFactory::CreateGPU(uint32_t& queue_family_index)
 
 		Result = vkEnumeratePhysicalDevices(Instance, &GpuCount, NULL);
 		if (Result != VK_SUCCESS)return false;
-		if (GpuCount == 0)return;
+		if (GpuCount == 0)return false;
 
 		PhysicalDevices.resize(GpuCount);
 
@@ -235,7 +235,7 @@ bool VKFactory::CreateGPU(uint32_t& queue_family_index)
 		VkPhysicalDeviceProperties Properties = {};
 		vkGetPhysicalDeviceProperties(i, &Properties);
 
-		if (Properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)continue;
+		if (Properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)continue;
 
 
 
@@ -269,7 +269,7 @@ bool VKFactory::CreateGPU(uint32_t& queue_family_index)
 	return false;
 }
 
-VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), m_CommandPool(0)
+VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), m_CommandPool(0), DefaultSampler(0)
 {
 	LoadFunctions();
 #ifdef DEVELOPER_VERSION
@@ -303,14 +303,38 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), m_CommandPool
 		CommandBufferAllocateInfo.commandBufferCount = 1;
 
 		V_CHK(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
-		//	vkFreeCommandBuffers
 	}
-
-
 	{
+		VkFenceCreateInfo FenceCreateInfo = {};
+		FenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		FenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		V_CHK(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
 		V_CHK(vkWaitForFences(Device, 1, &Fence, true, UINT64_MAX));
 		V_CHK(vkResetFences(Device, 1, &Fence));
 	}
+	{
+		VkSamplerCreateInfo SamplerCreateInfo = {};
+		SamplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+		SamplerCreateInfo.magFilter = VK_FILTER_NEAREST;
+		SamplerCreateInfo.minFilter = VK_FILTER_NEAREST;
+		SamplerCreateInfo.anisotropyEnable = VK_FALSE;
+		SamplerCreateInfo.compareEnable = VK_FALSE;
+		SamplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		SamplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+
+		SamplerCreateInfo.mipLodBias = 0.f;
+		SamplerCreateInfo.maxLod = 3.402823466e+38f;
+		SamplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		SamplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		SamplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+		SamplerCreateInfo.maxAnisotropy = 0;
+		SamplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		SamplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+
+		V_CHK(vkCreateSampler(Device, &SamplerCreateInfo, nullptr, &DefaultSampler));
+}
 #ifdef RTX
 	if (bSupportRayTracing)
 	{
@@ -356,9 +380,12 @@ VKFactory::~VKFactory()
 #ifdef DEVELOPER_VERSION
 	if (GDebugRender)
 	{
-		vkDestroyDebugUtilsMessengerEXT(Instance, DebugMessenger, nullptr);
+		vkDestroyDebugUtilsMessengerEXT(Instance, m_DebugMessenger, nullptr);
 	}
 #endif
+
+	if (DefaultSampler)
+		vkDestroySampler(Device, DefaultSampler, nullptr);
 	if (Device)
 		vkDestroyDevice(Device, nullptr);
 	if (Instance)
@@ -366,19 +393,67 @@ VKFactory::~VKFactory()
 
 }
 
+
+bool VKFactory::SupportRayTracing()
+{
+#ifdef RTX
+	return bSupportRayTracing;
+#else
+	return false;
+#endif
+}
+
+bool VKFactory::SupportMeshShader()
+{
+	return false;
+}
+
+void VKFactory::LockCommandBuffer()
+{
+	m_CommandMutex.Lock();
+
+	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+	{
+		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	}
+	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+}
+
+void VKFactory::UnlockCommandBuffer()
+{
+	static VkPipelineStageFlags StageOut = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	V_CHK(vkEndCommandBuffer(CommandBuffer));
+	VkSubmitInfo SubmitInfo = {};
+	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	SubmitInfo.waitSemaphoreCount = 0;
+	SubmitInfo.pWaitSemaphores = 0;
+	SubmitInfo.signalSemaphoreCount = 0;
+	SubmitInfo.pSignalSemaphores = 0;// &buf.acquire_semaphore;
+	SubmitInfo.pWaitDstStageMask = &StageOut;
+	SubmitInfo.pCommandBuffers = &CommandBuffer;
+	SubmitInfo.commandBufferCount = 1;
+	V_CHK(vkQueueSubmit(Factory->Queue, 1, &SubmitInfo, Fence));
+	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
+	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
+	m_CommandMutex.Unlock();
+}
+
+
+
 BearRHI::BearRHIContext* VKFactory::CreateContext()
 {
 	return bear_new<VKContext>();
 }
 
-BearRHI::BearRHIViewport* VKFactory::CreateViewport(void* Handle, size_t Width, size_t Height, bool Fullscreen, bool VSync, const BearViewportDescription& Description)
+BearRHI::BearRHIViewport* VKFactory::CreateViewport(void* handle, size_t width, size_t height, bool fullscreen, bool vsync, const BearViewportDescription& description)
 {
-	return bear_new<VKViewport>(Handle, Width, Height, Fullscreen, VSync, Description);
+	return bear_new<VKViewport>(handle, width, height, fullscreen, vsync, description);
 }
 
-BearRHI::BearRHIShader* VKFactory::CreateShader(BearShaderType Type)
+BearRHI::BearRHIShader* VKFactory::CreateShader(BearShaderType type)
 {
-	return bear_new<VKShader>(Type);
+	return bear_new<VKShader>(type);
 }
 
 BearRHI::BearRHIVertexBuffer* VKFactory::CreateVertexBuffer()
@@ -391,106 +466,106 @@ BearRHI::BearRHIIndexBuffer* VKFactory::CreateIndexBuffer()
 	return bear_new<VKIndexBuffer>();
 }
 
-BearRHI::BearRHIPipelineGraphics* VKFactory::CreatePipelineGraphics(const BearPipelineGraphicsDescription& Description)
+BearRHI::BearRHIPipelineGraphics* VKFactory::CreatePipelineGraphics(const BearPipelineGraphicsDescription& description)
 {
-	return bear_new<VKPipelineGraphics>(Description);
+	return bear_new<VKPipelineGraphics>(description);
 }
 
-BearRHI::BearRHIPipelineMesh* VKFactory::CreatePipelineMesh(const BearPipelineMeshDescription& Description)
+BearRHI::BearRHIPipelineMesh* VKFactory::CreatePipelineMesh(const BearPipelineMeshDescription& description)
 {
-	return bear_new<VKPipelineMesh>(Description);
+	return bear_new<VKPipelineMesh>(description);
 }
 
-BearRHI::BearRHIPipelineRayTracing* VKFactory::CreatePipelineRayTracing(const BearPipelineRayTracingDescription& Description)
+BearRHI::BearRHIPipelineRayTracing* VKFactory::CreatePipelineRayTracing(const BearPipelineRayTracingDescription& description)
 {
 #ifdef RTX
-	return bear_new<VKPipelineRayTracing>(Description);
+	return bear_new<VKPipelineRayTracing>(description);
 #else 
 	return nullptr;
 #endif
 }
 
-BearRHI::BearRHIRayTracingBottomLevel* VKFactory::CreateRayTracingBottomLevel(const BearRayTracingBottomLevelDescription& Description)
+BearRHI::BearRHIRayTracingBottomLevel* VKFactory::CreateRayTracingBottomLevel(const BearRayTracingBottomLevelDescription& description)
 {
 #ifdef RTX
-	return bear_new<VKBottomLevel>(Description);
+	return bear_new<VKRayTracingBottomLevel>(description);
 #else 
 	return nullptr;
 #endif
 }
 
-BearRHI::BearRHIRayTracingTopLevel* VKFactory::CreateRayTracingTopLevel(const BearRayTracingTopLevelDescription& Description)
+BearRHI::BearRHIRayTracingTopLevel* VKFactory::CreateRayTracingTopLevel(const BearRayTracingTopLevelDescription& description)
 {
 #ifdef RTX
-	return bear_new<VKTopLevel>(Description);
+	return bear_new<VKRayTracingTopLevel>(description);
 #else 
 	return nullptr;
 #endif
 }
 
-BearRHI::BearRHIRayTracingShaderTable* VKFactory::CreateRayTracingShaderTable(const BearRayTracingShaderTableDescription& Description)
+BearRHI::BearRHIRayTracingShaderTable* VKFactory::CreateRayTracingShaderTable(const BearRayTracingShaderTableDescription& description)
 {
 #ifdef RTX
-	return bear_new<VKRayTracingShaderTable>(Description);
+	return bear_new<VKRayTracingShaderTable>(description);
 #else 
 	return nullptr;
 #endif
 }
 
-BearRHI::BearRHIUniformBuffer* VKFactory::CreateUniformBuffer(size_t Stride, size_t Count, bool Dynamic)
+BearRHI::BearRHIUniformBuffer* VKFactory::CreateUniformBuffer(size_t stride, size_t count, bool dynamic)
 {
-	return bear_new<VKUniformBuffer>(Stride, Count, Dynamic);
+	return bear_new<VKUniformBuffer>(stride, count, dynamic);
 }
 
 
-BearRHI::BearRHIRootSignature* VKFactory::CreateRootSignature(const BearRootSignatureDescription& Description)
+BearRHI::BearRHIRootSignature* VKFactory::CreateRootSignature(const BearRootSignatureDescription& description)
 {
-	return bear_new<VKRootSignature>(Description);
+	return bear_new<VKRootSignature>(description);
 }
 
-BearRHI::BearRHIDescriptorHeap* VKFactory::CreateDescriptorHeap(const BearDescriptorHeapDescription& Description)
+BearRHI::BearRHIDescriptorHeap* VKFactory::CreateDescriptorHeap(const BearDescriptorHeapDescription& description)
 {
-	return bear_new<VKDescriptorHeap>(Description);
+	return bear_new<VKDescriptorHeap>(description);
 }
 
-BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data)
+BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t width, size_t height, size_t mips, size_t count, BearTexturePixelFormat pixel_format, BearTextureUsage type_usage, void* data)
 {
-	return bear_new<VKTexture2D>(Width,Height,Mips,Count, PixelFormat, TypeUsage,data);
+	return bear_new<VKTexture2D>(width,height,mips,count, pixel_format, type_usage,data);
 }
 
-BearRHI::BearRHITextureCube* VKFactory::CreateTextureCube(size_t Width, size_t Height, size_t Mips, size_t Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data)
+BearRHI::BearRHITextureCube* VKFactory::CreateTextureCube(size_t width, size_t height, size_t mips, size_t count, BearTexturePixelFormat pixel_format, BearTextureUsage type_usage, void* data)
 {
-	return bear_new<VKTextureCube>(Width, Height, Mips, Count, PixelFormat, TypeUsage, data);
+	return bear_new<VKTextureCube>(width, height, mips, count, pixel_format, type_usage, data);
 }
 
-BearRHI::BearRHIStructuredBuffer* VKFactory::CreateStructuredBuffer(size_t size, void* data, bool UAV)
+BearRHI::BearRHIStructuredBuffer* VKFactory::CreateStructuredBuffer(size_t size, void* data, bool uav)
 {
-	return bear_new<VKStructuredBuffer>(size, data, UAV);
+	return bear_new<VKStructuredBuffer>(size, data, uav);
 }
 
-BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t Width, size_t Height, BearRenderTargetFormat Format)
+BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t width, size_t height, BearRenderTargetFormat Format)
 {
-	return bear_new<VKTexture2D>(Width, Height, Format);
+	return bear_new<VKTexture2D>(width, height, Format);
 }
 
-BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t Width, size_t Height, BearDepthStencilFormat Format)
+BearRHI::BearRHITexture2D* VKFactory::CreateTexture2D(size_t width, size_t height, BearDepthStencilFormat Format)
 {
-	return bear_new<VKTexture2D>(Width, Height, Format);
+	return bear_new<VKTexture2D>(width, height, Format);
 }
 
-BearRHI::BearRHISampler* VKFactory::CreateSampler(const BearSamplerDescription& Description)
+BearRHI::BearRHISampler* VKFactory::CreateSampler(const BearSamplerDescription& description)
 {
-	return  bear_new<VKSamplerState>(Description);
+	return  bear_new<VKSamplerState>(description);
 }
 
-BearRHI::BearRHIRenderPass* VKFactory::CreateRenderPass(const BearRenderPassDescription& Description)
+BearRHI::BearRHIRenderPass* VKFactory::CreateRenderPass(const BearRenderPassDescription& description)
 {
-	return  bear_new<VKRenderPass>(Description);
+	return  bear_new<VKRenderPass>(description);
 }
 
-BearRHI::BearRHIFrameBuffer* VKFactory::CreateFrameBuffer(const BearFrameBufferDescription& Description)
+BearRHI::BearRHIFrameBuffer* VKFactory::CreateFrameBuffer(const BearFrameBufferDescription& description)
 {
-	return  bear_new<VKFrameBuffer>(Description);
+	return  bear_new<VKFrameBuffer>(description);
 }
 
 VkSamplerAddressMode VKFactory::Translation(BearSamplerAddressMode format)
@@ -820,48 +895,145 @@ VkFormat VKFactory::Translation(BearDepthStencilFormat format)
 	return VK_FORMAT_D32_SFLOAT_S8_UINT;
 }
 
-bool VKFactory::SupportRayTracing()
+VkFormat VKFactory::Translation(BearVertexFormat format)
 {
-#ifdef RTX
-	return bSupportRayTracing;
-#else
-	return false;
-#endif
-}
-
-bool VKFactory::SupportMeshShader()
-{
-	return false;
-}
-
-void VKFactory::LockCommandBuffer()
-{
-	m_CommandMutex.Lock();
-
-	VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
+	switch (format)
 	{
-		CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	case BearVertexFormat::R16G16_SINT:
+		return VkFormat::VK_FORMAT_R16G16_SINT;
+	case BearVertexFormat::R16G16B16A16_SINT:
+		return VkFormat::VK_FORMAT_R16G16B16A16_SINT;
+	case BearVertexFormat::R16G16_FLOAT:
+		return VkFormat::VK_FORMAT_R16G16_SFLOAT;
+	case BearVertexFormat::R16G16B16A16_FLOAT:
+		return VkFormat::VK_FORMAT_R16G16B16A16_SFLOAT;
+	case BearVertexFormat::R32G32B32A32_FLOAT:
+		return VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
+	case BearVertexFormat::R32G32B32_FLOAT:
+		return VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+	case BearVertexFormat::R32G32_FLOAT:
+		return VkFormat::VK_FORMAT_R32G32_SFLOAT;
+	case BearVertexFormat::R32_FLOAT:
+		return VkFormat::VK_FORMAT_R32_SFLOAT;
+
+	case BearVertexFormat::R32_INT:
+		return VkFormat::VK_FORMAT_R32_SINT;
+	case BearVertexFormat::R8G8B8A8:
+		return VkFormat::VK_FORMAT_R8G8B8A8_UINT;
+	case BearVertexFormat::R8G8:
+		return VkFormat::VK_FORMAT_R8G8_UINT;
+	case BearVertexFormat::R8:
+		return VkFormat::VK_FORMAT_R8_UINT;
+	default:
+		BEAR_CHECK(0);;
+		return VkFormat::VK_FORMAT_UNDEFINED;
 	}
-	V_CHK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
 }
 
-void VKFactory::UnlockCommandBuffer()
+bsize VKFactory::TranslationInSize(BearVertexFormat format)
 {
-	static VkPipelineStageFlags StageOut = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-	V_CHK(vkEndCommandBuffer(CommandBuffer));
-	VkSubmitInfo SubmitInfo = {};
-	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	SubmitInfo.waitSemaphoreCount = 0;
-	SubmitInfo.pWaitSemaphores = 0;
-	SubmitInfo.signalSemaphoreCount = 0;
-	SubmitInfo.pSignalSemaphores = 0;// &buf.acquire_semaphore;
-	SubmitInfo.pWaitDstStageMask = &StageOut;
-	SubmitInfo.pCommandBuffers = &CommandBuffer;
-	SubmitInfo.commandBufferCount = 1;
-	V_CHK(vkQueueSubmit(Factory->Queue, 1, &SubmitInfo, Fence));
-	V_CHK(vkWaitForFences(Factory->Device, 1, &Fence, true, UINT64_MAX));
-	V_CHK(vkResetFences(Factory->Device, 1, &Fence));
-	m_CommandMutex.Unlock();
+	switch (format)
+	{
+	case BearVertexFormat::R16G16_SINT:
+		return 2 * 2;
+	case BearVertexFormat::R16G16B16A16_SINT:
+		return 2 * 4;
+	case BearVertexFormat::R16G16_FLOAT:
+		return 2 * 2;
+	case BearVertexFormat::R16G16B16A16_FLOAT:
+		return 2 * 4;
+
+	case BearVertexFormat::R32G32B32A32_FLOAT:
+		return sizeof(float) * 4;
+	case BearVertexFormat::R32G32B32_FLOAT:
+		return sizeof(float) * 3;
+	case BearVertexFormat::R32G32_FLOAT:
+		return sizeof(float) * 2;
+	case BearVertexFormat::R32_FLOAT:
+		return sizeof(float);
+
+	case BearVertexFormat::R32_INT:
+		return sizeof(int);
+	case BearVertexFormat::R8G8B8A8:
+		return sizeof(int);
+
+	case BearVertexFormat::R8G8:
+		return sizeof(short);
+	case BearVertexFormat::R8:
+		return sizeof(uint8);
+	default:
+		BEAR_CHECK(0);;
+		return VkFormat::VK_FORMAT_UNDEFINED;
+	}
 }
 
+VkFormat VKFactory::TranslationForRayTracing(BearVertexFormat format)
+{
+	switch (format)
+	{
+	case BearVertexFormat::R16G16_FLOAT:
+		return VK_FORMAT_R16G16_SFLOAT;
+	case BearVertexFormat::R16G16B16A16_FLOAT:
+		return VK_FORMAT_R16G16B16A16_SFLOAT;
+		break;
+	case BearVertexFormat::R32G32_FLOAT:
+		return VK_FORMAT_R32G32_SFLOAT;
+		break;
+	case BearVertexFormat::R32G32B32_FLOAT:
+		return VK_FORMAT_R32G32B32_SFLOAT;
+		break;
+	default:
+		BEAR_CHECK(false);
+		break;
+	}
+	return VK_FORMAT_R16G16_SFLOAT;
+}
+
+VkGeometryTypeKHR VKFactory::Translation(BearRaytracingGeometryType format)
+{
+	switch (format)
+	{
+	case BearRaytracingGeometryType::Triangles:
+		return VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+	case BearRaytracingGeometryType::ProceduralPrimitiveAABBS:
+		return VK_GEOMETRY_TYPE_AABBS_NV;
+		break;
+	default:
+		BEAR_CHECK(false);
+	}
+	return VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+}
+
+VkPrimitiveTopology VKFactory::Translation(BearTopologyType format)
+{
+	switch (format)
+	{
+	case BearTopologyType::PointList:
+		return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+	case BearTopologyType::LintList:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	case BearTopologyType::LineStrip:
+		return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+	case BearTopologyType::TriangleList:
+		return  VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	case BearTopologyType::TriangleStrip:
+		return  VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+	default:
+		BEAR_CHECK(false);
+	}
+	return  VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+}
+
+VkColorComponentFlags VKFactory::Translation(BearColorWriteFlags flags)
+{
+	VkColorComponentFlags Result = 0;
+	if (flags.test((uint32) BearColorWriteMask::R))
+		Result |= VK_COLOR_COMPONENT_R_BIT;
+	if (flags.test((uint32)BearColorWriteMask::G))
+		Result |= VK_COLOR_COMPONENT_G_BIT;
+	if (flags.test((uint32)BearColorWriteMask::B))
+		Result |= VK_COLOR_COMPONENT_B_BIT;
+	if (flags.test((uint32)BearColorWriteMask::A))
+		Result |= VK_COLOR_COMPONENT_A_BIT;
+	return Result;
+}

@@ -1,5 +1,5 @@
 #include "VKPCH.h"
-size_t TopLevelCounter = 0;
+size_t RayTracingTopLevelCounter = 0;
 #ifdef RTX
 struct VkGeometryInstance 
 {
@@ -11,15 +11,18 @@ struct VkGeometryInstance
     uint64_t accelerationStructureHandle;
 };
 
+#ifdef MemoryBarrier
+#undef MemoryBarrier
+#endif
 
-VKTopLevel::VKTopLevel(const BearTopLevelDescription& desc)
+VKRayTracingTopLevel::VKRayTracingTopLevel(const BearRayTracingTopLevelDescription& description)
 {
-    TopLevelCounter++;
+    RayTracingTopLevelCounter++;
 	DescriptorAccelerationStructureInfo.pNext = VK_NULL_HANDLE;
 	DescriptorAccelerationStructureInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV;
 	BearVector<VkGeometryInstance> InstanceDescs;
-	InstanceDescs.reserve(desc.InstanceDescriptions.size());
-	for (const BearTopLevelDescription::InstanceDescription& i : desc.InstanceDescriptions)
+	InstanceDescs.reserve(description.InstanceDescriptions.size());
+	for (const BearRayTracingTopLevelDescription::InstanceDescription& i : description.InstanceDescriptions)
 	{
 		VkGeometryInstance InstanceDesc = {};
 		for (bsize x = 0; x < 3; x++)
@@ -33,7 +36,7 @@ VKTopLevel::VKTopLevel(const BearTopLevelDescription& desc)
 		InstanceDesc.mask = i.InstanceMask;
 		InstanceDesc.instanceOffset = i.InstanceContributionToHitGroupIndex;
 		InstanceDesc.flags = *i.Flags;
-		auto BottomLevel = static_cast<const VKBottomLevel*>(i.BottomLevel.get());
+		auto BottomLevel = static_cast<const VKRayTracingBottomLevel*>(i.BottomLevel.get());
 		InstanceDesc.accelerationStructureHandle = BottomLevel->AccelerationStructureHandle;
 		InstanceDescs.push_back(InstanceDesc);
 	}
@@ -97,16 +100,16 @@ VKTopLevel::VKTopLevel(const BearTopLevelDescription& desc)
 		V_CHK(vkAllocateMemory(Factory->Device, &AllocInfo, nullptr, &ResultBufferMemory));
 	}
 
-	VkBindAccelerationStructureMemoryInfoNV bindInfo;
-	bindInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
-	bindInfo.pNext = nullptr;
-	bindInfo.accelerationStructure = AccelerationStructure;
-	bindInfo.memory = ResultBufferMemory;
-	bindInfo.memoryOffset = 0;
-	bindInfo.deviceIndexCount = 0;
-	bindInfo.pDeviceIndices = nullptr;
+	VkBindAccelerationStructureMemoryInfoNV AccelerationStructureMemoryInfo = {};
+	AccelerationStructureMemoryInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
+	AccelerationStructureMemoryInfo.pNext = nullptr;
+	AccelerationStructureMemoryInfo.accelerationStructure = AccelerationStructure;
+	AccelerationStructureMemoryInfo.memory = ResultBufferMemory;
+	AccelerationStructureMemoryInfo.memoryOffset = 0;
+	AccelerationStructureMemoryInfo.deviceIndexCount = 0;
+	AccelerationStructureMemoryInfo.pDeviceIndices = nullptr;
 
-	V_CHK(vkBindAccelerationStructureMemoryNV(Factory->Device, 1, &bindInfo));
+	V_CHK(vkBindAccelerationStructureMemoryNV(Factory->Device, 1, &AccelerationStructureMemoryInfo));
 
 
 	VkBuffer InstancesBuffer;
@@ -137,14 +140,14 @@ VKTopLevel::VKTopLevel(const BearTopLevelDescription& desc)
 	vkFreeMemory(Factory->Device, InstancesBufferMemory, 0);
 }
 
-VKTopLevel::~VKTopLevel()
+VKRayTracingTopLevel::~VKRayTracingTopLevel()
 {
 	vkDestroyAccelerationStructureNV(Factory->Device, AccelerationStructure, VK_NULL_HANDLE);
 	vkFreeMemory(Factory->Device, ResultBufferMemory, VK_NULL_HANDLE);
-    TopLevelCounter--;
+    RayTracingTopLevelCounter--;
 }
 
-void* VKTopLevel::QueryInterface(int Type)
+void* VKRayTracingTopLevel::QueryInterface(int Type)
 {
 	switch (Type)
 	{
@@ -155,12 +158,12 @@ void* VKTopLevel::QueryInterface(int Type)
 	}
 }
 
-void VKTopLevel::SetAsSRV(VkWriteDescriptorSet* HEAP, size_t offset)
+void VKRayTracingTopLevel::SetAsSRV(VkWriteDescriptorSet* heap, size_t offset)
 {
 	BEAR_CHECK(AccelerationStructure);
 	DescriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 	DescriptorAccelerationStructureInfo.pAccelerationStructures = &AccelerationStructure;
-	HEAP->descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
-	HEAP->pNext = &DescriptorAccelerationStructureInfo;
+	heap->descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+	heap->pNext = &DescriptorAccelerationStructureInfo;
 }
 #endif

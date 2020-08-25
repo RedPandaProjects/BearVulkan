@@ -1,31 +1,24 @@
 #include "VKPCH.h"
-size_t BottomLevelCounter = 0;
+size_t RayTracingBottomLevelCounter = 0;
 #ifdef RTX
-VKBottomLevel::VKBottomLevel(const BearBottomLevelDescription& desc):AccelerationStructure(VK_NULL_HANDLE), ResultBufferMemory(VK_NULL_HANDLE)
+#ifdef MemoryBarrier
+#undef MemoryBarrier
+#endif
+VKRayTracingBottomLevel::VKRayTracingBottomLevel(const BearRayTracingBottomLevelDescription& description):AccelerationStructure(VK_NULL_HANDLE), ResultBufferMemory(VK_NULL_HANDLE)
 {
-	BottomLevelCounter++;
-
+	RayTracingBottomLevelCounter++;
+	BEAR_CHECK(Factory->bSupportRayTracing)
 	BearVector<VkGeometryNV>GeometryDescs;
-	for (const  BearBottomLevelDescription::GeometryDescription& i : desc.GeometryDescriptions)
+	for (const  BearRayTracingBottomLevelDescription::GeometryDescription& i : description.GeometryDescriptions)
 	{
 		VkGeometryNV Gometry = {};
 		Gometry.sType = VK_STRUCTURE_TYPE_GEOMETRY_NV;
 		Gometry.pNext = VK_NULL_HANDLE;
+		Gometry.geometryType = VKFactory::Translation(i.Type);
 		Gometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV;
 		Gometry.geometry.triangles.pNext = VK_NULL_HANDLE;
 		Gometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV;
 		Gometry.geometry.aabbs.pNext = VK_NULL_HANDLE;
-		switch (i.Type)
-		{
-		case BearRaytracingGeometryType::Triangles:
-			Gometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_NV;
-			break;
-		case BearRaytracingGeometryType::ProceduralPrimitiveAABBS:
-			Gometry.geometryType = VK_GEOMETRY_TYPE_AABBS_NV;
-			break;
-		default:
-			BEAR_CHECK(false);
-		}
 		{
 			Gometry.flags = 0;
 			if (i.Flags.test((uint32)BearRaytracingGeometryFlags::Opaque))
@@ -50,24 +43,7 @@ VKBottomLevel::VKBottomLevel(const BearBottomLevelDescription& desc):Acceleratio
 				Gometry.geometry.triangles.vertexStride = VertexBuffer->VertexDescription.stride;
 				Gometry.geometry.triangles.vertexOffset = i.Triangles.VertexOffset;
 				Gometry.geometry.triangles.vertexCount = i.Triangles.VertexCount;
-				switch (i.Triangles.VertexFormat)
-				{
-				case VF_R16G16_FLOAT:
-					Gometry.geometry.triangles.vertexFormat = VK_FORMAT_R16G16_SFLOAT;
-					break;
-				case VF_R16G16B16A16_FLOAT:
-					Gometry.geometry.triangles.vertexFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
-					break;
-				case VF_R32G32_FLOAT:
-					Gometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32_SFLOAT;
-					break;
-				case VF_R32G32B32_FLOAT:
-					Gometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-					break;
-				default:
-					BEAR_CHECK(false);
-					break;
-				}
+				Gometry.geometry.triangles.vertexFormat = VKFactory::TranslationForRayTracing(i.Triangles.VertexFormat);
 				BEAR_CHECK(i.Triangles.VertexCount >= VertexBuffer->Size / VertexBuffer->VertexDescription.stride);
 				
 				
@@ -158,16 +134,16 @@ VKBottomLevel::VKBottomLevel(const BearBottomLevelDescription& desc):Acceleratio
 		V_CHK(vkAllocateMemory(Factory->Device, &AllocInfo, nullptr, &ResultBufferMemory));
 	}
 
-	VkBindAccelerationStructureMemoryInfoNV bindInfo;
-	bindInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
-	bindInfo.pNext = nullptr;
-	bindInfo.accelerationStructure = AccelerationStructure;
-	bindInfo.memory = ResultBufferMemory;
-	bindInfo.memoryOffset = 0;
-	bindInfo.deviceIndexCount = 0;
-	bindInfo.pDeviceIndices = nullptr;
+	VkBindAccelerationStructureMemoryInfoNV AccelerationStructureMemoryInfo;
+	AccelerationStructureMemoryInfo.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV;
+	AccelerationStructureMemoryInfo.pNext = nullptr;
+	AccelerationStructureMemoryInfo.accelerationStructure = AccelerationStructure;
+	AccelerationStructureMemoryInfo.memory = ResultBufferMemory;
+	AccelerationStructureMemoryInfo.memoryOffset = 0;
+	AccelerationStructureMemoryInfo.deviceIndexCount = 0;
+	AccelerationStructureMemoryInfo.pDeviceIndices = nullptr;
 
-	V_CHK(vkBindAccelerationStructureMemoryNV(Factory->Device, 1, &bindInfo));
+	V_CHK(vkBindAccelerationStructureMemoryNV(Factory->Device, 1, &AccelerationStructureMemoryInfo));
 
 	Factory->LockCommandBuffer();
 
@@ -187,15 +163,10 @@ VKBottomLevel::VKBottomLevel(const BearBottomLevelDescription& desc):Acceleratio
 	vkFreeMemory(Factory->Device, ScratchBufferMemory, 0);
 }
 
-VKBottomLevel::~VKBottomLevel()
+VKRayTracingBottomLevel::~VKRayTracingBottomLevel()
 {
 	vkDestroyAccelerationStructureNV(Factory->Device, AccelerationStructure, VK_NULL_HANDLE);
 	vkFreeMemory(Factory->Device, ResultBufferMemory, VK_NULL_HANDLE);
-	BottomLevelCounter--;
-}
-
-void* VKBottomLevel::QueryInterface(int Type)
-{
-	return nullptr;
+	RayTracingBottomLevelCounter--;
 }
 #endif

@@ -1,46 +1,31 @@
 #include "VKPCH.h"
 size_t RootSignatureCounter = 0;
-inline VkShaderStageFlagBits TransletionShaderVisible(BearShaderType Type)
+inline VkShaderStageFlagBits TransletionShaderVisible(BearShaderType type)
 {
-	switch (Type)
+	switch (type)
 	{
-	case ST_Vertex:
+	case BearShaderType::Vertex:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
 		break;
-	case ST_Hull:
+	case BearShaderType::Hull:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
 		break;
-	case ST_Domain:
+	case BearShaderType::Domain:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
 		break;
-	case ST_Geometry:
+	case BearShaderType::Geometry:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_GEOMETRY_BIT;
 		break;
-	case ST_Pixel:
+	case BearShaderType::Pixel:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
 		break;
-	case ST_Compute:
+	case BearShaderType::Compute:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT;
 		break;
-	case ST_RayGeneration:
+	case BearShaderType::RayTracing:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_NV;
 		break;
-	case ST_Miss:
-		return VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_NV;
-		break;
-	case ST_Callable:
-		return VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_NV;
-		break;
-	case ST_Intersection:
-		return VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_NV;
-		break;
-	case ST_AnyHit:
-		return VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_NV;
-		break;
-	case ST_ClosestHit:
-		return VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
-		break;
-	case ST_ALL:
+	case BearShaderType::ALL:
 		return VkShaderStageFlagBits::VK_SHADER_STAGE_ALL;
 		break;
 	default:
@@ -48,7 +33,7 @@ inline VkShaderStageFlagBits TransletionShaderVisible(BearShaderType Type)
 	}
 	return VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
 }
-VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description):Description(Description)
+VKRootSignature::VKRootSignature(const BearRootSignatureDescription& description):Description(description)
 {
 
 	RootSignatureCounter++;
@@ -63,47 +48,47 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 			SlotBuffers[i] = 16;
 			SlotSRVs[i] = 16;
 			SlotUAVs[i] = 16;
-			if (Description.UniformBuffers[i].Shader != ST_Null)CountBuffers++;
-			if (Description.SRVResources[CountSRVs].Shader != ST_Null) CountSRVs++;
-			if (Description.UAVResources[CountUAVs].Shader != ST_Null) CountUAVs++;
-			if (Description.Samplers[CountSamplers].Shader != ST_Null) CountSamplers++;
+			if (description.UniformBuffers[i].Shader != BearShaderType::Null)CountBuffers++;
+			if (description.SRVResources[CountSRVs].Shader != BearShaderType::Null) CountSRVs++;
+			if (description.UAVResources[CountUAVs].Shader != BearShaderType::Null) CountUAVs++;
+			if (description.Samplers[CountSamplers].Shader != BearShaderType::Null) CountSamplers++;
 		}
 	}
 	
 	{
 		size_t Offset = 0;
-		VkDescriptorSetLayoutBinding LayoutBinding[64];
+		VkDescriptorSetLayoutBinding LayoutBinding[64] = {};
 		{
 
 			for (size_t i = 0; i < 16; i++)
 			{
-				if (Description.UniformBuffers[i].Shader != ST_Null)
+				if (description.UniformBuffers[i].Shader != BearShaderType::Null)
 				{
 					SlotBuffers[i] = Offset;
 					LayoutBinding[Offset].binding = static_cast<uint32_t>(i);
 					LayoutBinding[Offset].descriptorCount = 1;
 					LayoutBinding[Offset].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					LayoutBinding[Offset].pImmutableSamplers = nullptr;
-					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(Description.UniformBuffers[i].Shader);
+					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(description.UniformBuffers[i].Shader);
 					Offset++;
 				}
 			}
 			for (size_t i = 0; i < 16; i++)
 			{
-				if (Description.SRVResources[i].Shader != ST_Null)
+				if (description.SRVResources[i].Shader != BearShaderType::Null)
 				{
 					SlotSRVs[i] = Offset - CountBuffers;
 					LayoutBinding[Offset].binding = static_cast<uint32_t>(i + 16);
 					LayoutBinding[Offset].descriptorCount = 1;
-					switch (Description.SRVResources[i].DescriptorType)
+					switch (description.SRVResources[i].DescriptorType)
 					{
-					case BearDescriptorType::DT_Buffer:
+					case BearSRVDescriptorType::Buffer:
 						LayoutBinding[Offset].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 						break;
-					case BearDescriptorType::DT_Image:
+					case BearSRVDescriptorType::Image:
 						LayoutBinding[Offset].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 						break;
-					case BearDescriptorType::DT_AccelerationStructure:
+					case BearSRVDescriptorType::AccelerationStructure:
 						LayoutBinding[Offset].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
 						break;
 					default:
@@ -111,7 +96,7 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 						break;
 					}
 					LayoutBinding[Offset].pImmutableSamplers = nullptr;
-					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(Description.SRVResources[i].Shader);
+					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(description.SRVResources[i].Shader);
 					Offset++;
 				}
 			
@@ -120,17 +105,17 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 
 			for (size_t i = 0; i < 16; i++)
 			{
-				if (Description.UAVResources[i].Shader != ST_Null)
+				if (description.UAVResources[i].Shader != BearShaderType::Null)
 				{
 					SlotUAVs[i] = Offset - (CountBuffers + CountSRVs);
 					LayoutBinding[Offset].binding = static_cast<uint32_t>(i + 32);
 					LayoutBinding[Offset].descriptorCount = 1;
-					switch (Description.UAVResources[i].DescriptorType)
+					switch (description.UAVResources[i].DescriptorType)
 					{
-					case BearDescriptorType::DT_Buffer:
+					case BearUAVDescriptorType::Buffer:
 						LayoutBinding[Offset].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 						break;
-					case BearDescriptorType::DT_Image:
+					case BearUAVDescriptorType::Image:
 						LayoutBinding[Offset].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 						break;
 					default:
@@ -138,7 +123,7 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 						break;
 					}
 					LayoutBinding[Offset].pImmutableSamplers = nullptr;
-					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(Description.UAVResources[i].Shader);
+					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(description.UAVResources[i].Shader);
 					Offset++;
 				}
 
@@ -146,14 +131,14 @@ VKRootSignature::VKRootSignature(const BearRootSignatureDescription& Description
 
 			for (size_t i = 0; i < 16; i++)
 			{
-				if (Description.Samplers[i].Shader != ST_Null)
+				if (description.Samplers[i].Shader != BearShaderType::Null)
 				{
 					SlotSamplers[i] = Offset - (CountBuffers+CountSRVs+ CountUAVs);
 					LayoutBinding[Offset].binding = static_cast<uint32_t>(i + 48);
 					LayoutBinding[Offset].descriptorCount = 1;
 					LayoutBinding[Offset].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 					LayoutBinding[Offset].pImmutableSamplers = nullptr;
-					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(Description.Samplers[i].Shader);
+					LayoutBinding[Offset].stageFlags = TransletionShaderVisible(description.Samplers[i].Shader);
 					Offset++;
 				}
 			}

@@ -1,27 +1,27 @@
 #include "VKPCH.h"
 size_t VertexBufferCounter = 0;
-VKVertexBuffer::VKVertexBuffer() :m_dynamic(false)
+VKVertexBuffer::VKVertexBuffer() :m_Dynamic(false)
 {
 	VertexBufferCounter++;
 	Buffer = 0;
-	Memory = 0;
+	m_Memory = 0;
 	Size = 0;
 }
 
-void VKVertexBuffer::Create(size_t Stride, size_t Count, bool Dynamic,void*data)
+void VKVertexBuffer::Create(size_t stride, size_t count, bool dynamic,void*data)
 {
 	Clear();
-	m_dynamic = Dynamic;
+	m_Dynamic = dynamic;
 
-	if (Dynamic)
-		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Count * Stride, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Buffer, Memory);
+	if (dynamic)
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, count * stride, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Buffer, m_Memory);
 	else
-		CreateBuffer(Factory->PhysicalDevice, Factory->Device, Count * Stride, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Buffer, Memory);
+		CreateBuffer(Factory->PhysicalDevice, Factory->Device, count * stride, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Buffer, m_Memory);
 	VertexDescription.binding = 0;
 	VertexDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-	VertexDescription.stride = static_cast<uint32_t>(Stride);
-	Size = Stride * Count;
-	if (data && !Dynamic)
+	VertexDescription.stride = static_cast<uint32_t>(stride);
+	Size = stride * count;
+	if (data && !dynamic)
 	{
 		VkBuffer TempBuffer;
 		VkDeviceMemory TempMemory;
@@ -40,10 +40,10 @@ void VKVertexBuffer::Create(size_t Stride, size_t Count, bool Dynamic,void*data)
 	}
 	else if (data)
 	{
-		memcpy(Lock(), data, Count * sizeof(uint32));
+		memcpy(Lock(), data, count * sizeof(uint32));
 		Unlock();
 	}
-	BEAR_CHECK(Memory != 0);
+	BEAR_CHECK(m_Memory != 0);
 }
 
 VKVertexBuffer::~VKVertexBuffer()
@@ -54,27 +54,27 @@ VKVertexBuffer::~VKVertexBuffer()
 
 void* VKVertexBuffer::Lock()
 {
-	if (Memory == 0)return 0;
-	BEAR_CHECK(m_dynamic);
+	if (m_Memory == 0)return 0;
+	BEAR_CHECK(m_Dynamic);
 	uint8_t* pData;
-	V_CHK(vkMapMemory(Factory->Device, Memory, 0, Size, 0, (void**)&pData));
+	V_CHK(vkMapMemory(Factory->Device, m_Memory, 0, Size, 0, (void**)&pData));
 	return (uint32*)pData;
 }
 
 void VKVertexBuffer::Unlock()
 {
-	if (Memory == 0)return;
-	vkUnmapMemory(Factory->Device, Memory);
+	if (m_Memory == 0)return;
+	vkUnmapMemory(Factory->Device, m_Memory);
 }
 
 void VKVertexBuffer::Clear()
 {
 	Size = 0;
-	m_dynamic = false;
+	m_Dynamic = false;
 	if (Buffer)vkDestroyBuffer(Factory->Device, Buffer, 0);
 	Buffer = 0;
-	if (Memory)vkFreeMemory(Factory->Device, Memory, 0);
-	Memory = 0;
+	if (m_Memory)vkFreeMemory(Factory->Device, m_Memory, 0);
+	m_Memory = 0;
 }
 
 size_t VKVertexBuffer::GetCount()

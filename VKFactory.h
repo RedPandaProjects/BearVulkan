@@ -11,29 +11,29 @@ public:
 	VKFactory();
 	virtual ~VKFactory();
 	virtual BearRHI::BearRHIContext* CreateContext();
-	virtual BearRHI::BearRHIViewport* CreateViewport( void* Handle, size_t Width, size_t Height, bool Fullscreen, bool VSync, const BearViewportDescription& Description);
+	virtual BearRHI::BearRHIViewport* CreateViewport( void* handle, size_t width, size_t height, bool fullscreen, bool vsync, const BearViewportDescription& description);
 	virtual BearRHI::BearRHIShader* CreateShader(BearShaderType Type);
 	virtual BearRHI::BearRHIVertexBuffer* CreateVertexBuffer();
 	virtual BearRHI::BearRHIIndexBuffer* CreateIndexBuffer();
-	virtual BearRHI::BearRHIPipelineGraphics* CreatePipelineGraphics(const BearPipelineGraphicsDescription& Description);
-	virtual BearRHI::BearRHIPipelineMesh* CreatePipelineMesh(const BearPipelineMeshDescription& Description);
+	virtual BearRHI::BearRHIPipelineGraphics* CreatePipelineGraphics(const BearPipelineGraphicsDescription& description);
+	virtual BearRHI::BearRHIPipelineMesh* CreatePipelineMesh(const BearPipelineMeshDescription& description);
 	virtual BearRHI::BearRHIUniformBuffer* CreateUniformBuffer(size_t Stride, size_t Count, bool Dynamic);
-	virtual BearRHI::BearRHIRootSignature* CreateRootSignature(const BearRootSignatureDescription& Description);
-	virtual BearRHI::BearRHIDescriptorHeap* CreateDescriptorHeap(const BearDescriptorHeapDescription& Description);
-	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t Width, size_t Height, size_t Mips, size_t Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data = 0);
-	virtual BearRHI::BearRHITextureCube* CreateTextureCube(size_t Width, size_t Height, size_t Mips, size_t Count, BearTexturePixelFormat PixelFormat, BearTextureUsage TypeUsage, void* data = 0);
+	virtual BearRHI::BearRHIRootSignature* CreateRootSignature(const BearRootSignatureDescription& description);
+	virtual BearRHI::BearRHIDescriptorHeap* CreateDescriptorHeap(const BearDescriptorHeapDescription& description);
+	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t width, size_t height, size_t mips, size_t count, BearTexturePixelFormat pixel_format, BearTextureUsage type_usage, void* data = 0);
+	virtual BearRHI::BearRHITextureCube* CreateTextureCube(size_t width, size_t height, size_t mips, size_t count, BearTexturePixelFormat pixel_format, BearTextureUsage type_usage, void* data = 0);
 	virtual BearRHI::BearRHIStructuredBuffer* CreateStructuredBuffer(size_t size, void* data = 0, bool UAV = false);
 
-	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t Width, size_t Height, BearRenderTargetFormat Format);
-	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t Width, size_t Height, BearDepthStencilFormat Format);
-	virtual BearRHI::BearRHISampler* CreateSampler(const BearSamplerDescription& Description);
-	virtual BearRHI::BearRHIRenderPass* CreateRenderPass(const BearRenderPassDescription& Description);
-	virtual BearRHI::BearRHIFrameBuffer* CreateFrameBuffer(const BearFrameBufferDescription& Description);
+	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t width, size_t height, BearRenderTargetFormat format);
+	virtual BearRHI::BearRHITexture2D* CreateTexture2D(size_t width, size_t height, BearDepthStencilFormat format);
+	virtual BearRHI::BearRHISampler* CreateSampler(const BearSamplerDescription& description);
+	virtual BearRHI::BearRHIRenderPass* CreateRenderPass(const BearRenderPassDescription& description);
+	virtual BearRHI::BearRHIFrameBuffer* CreateFrameBuffer(const BearFrameBufferDescription& description);
 
-	virtual BearRHI::BearRHIPipelineRayTracing* CreatePipelineRayTracing(const BearPipelineRayTracingDescription& Description);
-	virtual BearRHI::BearRHIRayTracingBottomLevel* CreateRayTracingBottomLevel(const BearRayTracingBottomLevelDescription& Description);
-	virtual BearRHI::BearRHIRayTracingTopLevel* CreateRayTracingTopLevel(const BearRayTracingTopLevelDescription& Description);
-	virtual BearRHI::BearRHIRayTracingShaderTable* CreateRayTracingShaderTable(const BearRayTracingShaderTableDescription& Description);
+	virtual BearRHI::BearRHIPipelineRayTracing* CreatePipelineRayTracing(const BearPipelineRayTracingDescription& description);
+	virtual BearRHI::BearRHIRayTracingBottomLevel* CreateRayTracingBottomLevel(const BearRayTracingBottomLevelDescription& description);
+	virtual BearRHI::BearRHIRayTracingTopLevel* CreateRayTracingTopLevel(const BearRayTracingTopLevelDescription& description);
+	virtual BearRHI::BearRHIRayTracingShaderTable* CreateRayTracingShaderTable(const BearRayTracingShaderTableDescription& description);
 
 	static VkSamplerAddressMode Translation(BearSamplerAddressMode format);
 	static VkCullModeFlagBits Translation(BearRasterizerCullMode format);
@@ -48,6 +48,13 @@ public:
 	static VkFormat  Translation(BearTexturePixelFormat format);
 	static VkFormat  Translation(BearRenderTargetFormat format);
 	static VkFormat  Translation(BearDepthStencilFormat format);
+
+	static VkFormat Translation(BearVertexFormat format);
+	static bsize TranslationInSize(BearVertexFormat format);
+	static VkFormat TranslationForRayTracing(BearVertexFormat format);
+	static VkGeometryTypeKHR Translation(BearRaytracingGeometryType format);
+	static VkPrimitiveTopology Translation(BearTopologyType format);
+	static VkColorComponentFlags Translation(BearColorWriteFlags flags);
 public:
 	inline bool Empty()const { return Instance==0; }
 	virtual bool SupportRayTracing();
@@ -56,6 +63,8 @@ public:
 	VkCommandBuffer CommandBuffer;
 	void LockCommandBuffer();
 	void UnlockCommandBuffer();
+public:
+	VkSampler DefaultSampler;
 private:
 	BearMutex m_CommandMutex;
 	VkCommandPool m_CommandPool;
@@ -77,15 +86,17 @@ public:
 	VkFence Fence;
 private:
 #ifdef DEVELOPER_VERSION
-	VkDebugUtilsMessengerEXT DebugMessenger;
+	VkDebugUtilsMessengerEXT m_DebugMessenger;
 #endif
 public:
 #ifdef RTX
 	IDxcCompiler3* DxcCompiler;
 	IDxcLibrary* DxcLibrary;
 #endif
-private:
+public:
+#ifdef RTX
 	bool bSupportRayTracing;
+#endif
 };
 
 extern VKFactory* Factory;

@@ -1,18 +1,18 @@
 #include "VKPCH.h"
 size_t StructuredBufferCounter = 0;
-VKStructuredBuffer::VKStructuredBuffer(size_t size, void* Data, bool UAV):Size(size)
+VKStructuredBuffer::VKStructuredBuffer(size_t size, void* data, bool uac):Size(size)
 {
     StructuredBufferCounter++;
     CreateBuffer(Factory->PhysicalDevice, Factory->Device, Size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Buffer, Memory);
-    if (Data)
+    if (data)
     {
         VkBuffer TempBuffer;
         VkDeviceMemory TempMemory;
         CreateBuffer(Factory->PhysicalDevice, Factory->Device, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, TempBuffer, TempMemory);
 
-        uint8_t* pData;
-        V_CHK(vkMapMemory(Factory->Device, TempMemory, 0, Size, 0, (void**)&pData));
-        memcpy(pData, Data, Size);
+        uint8_t* Pointer;
+        V_CHK(vkMapMemory(Factory->Device, TempMemory, 0, Size, 0, (void**)&Pointer));
+        memcpy(Pointer, data, Size);
         vkUnmapMemory(Factory->Device, TempMemory);
 
         Factory->LockCommandBuffer();
@@ -21,15 +21,6 @@ VKStructuredBuffer::VKStructuredBuffer(size_t size, void* Data, bool UAV):Size(s
         vkDestroyBuffer(Factory->Device, TempBuffer, 0);
         vkFreeMemory(Factory->Device, TempMemory, 0);
     }
-  /*  VkBufferViewCreateInfo Info;
-    Info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-    Info.pNext = nullptr;
-    Info.flags = 0;
-    Info.format = VK_FORMAT_UNDEFINED;
-    Info.offset = 0;
-    Info.range = Size;
-    Info.buffer = Buffer;
-    V_CHK(vkCreateBufferView(Factory->Device, &Info, nullptr, &BufferView));*/
 }
 
 VKStructuredBuffer::~VKStructuredBuffer()
@@ -39,13 +30,13 @@ VKStructuredBuffer::~VKStructuredBuffer()
     if (Memory)vkFreeMemory(Factory->Device, Memory, 0);
 }
 
-void VKStructuredBuffer::SetAsSRV(VkWriteDescriptorSet* HEAP, size_t offset)
+void VKStructuredBuffer::SetAsSRV(VkWriteDescriptorSet* heap, size_t offset)
 {
-    HEAP->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    heap->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     BufferInfo.buffer = Buffer;
     BufferInfo.offset = offset;
     BufferInfo.range = Size- offset;
-    HEAP->pBufferInfo = &BufferInfo;
+    heap->pBufferInfo = &BufferInfo;
 }
 
 void* VKStructuredBuffer::QueryInterface(int Type)
@@ -61,19 +52,19 @@ void* VKStructuredBuffer::QueryInterface(int Type)
     }
 }
 
-void VKStructuredBuffer::SetAsUAV(VkWriteDescriptorSet* HEAP, size_t offset)
+void VKStructuredBuffer::SetAsUAV(VkWriteDescriptorSet* heap, size_t offset)
 {
-    HEAP->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    heap->descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     BufferInfo.buffer = Buffer;
     BufferInfo.offset = offset;
     BufferInfo.range = Size - offset;
-    HEAP->pBufferInfo = &BufferInfo;
+    heap->pBufferInfo = &BufferInfo;
 }
 
-void VKStructuredBuffer::LockUAV(VkCommandBuffer CommandLine)
+void VKStructuredBuffer::LockUAV(VkCommandBuffer command_line)
 {
 }
 
-void VKStructuredBuffer::UnlockUAV(VkCommandBuffer CommandLine)
+void VKStructuredBuffer::UnlockUAV(VkCommandBuffer command_line)
 {
 }

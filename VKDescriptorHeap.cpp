@@ -1,31 +1,31 @@
 #include "VKPCH.h"
 size_t DescriptorHeapCounter = 0;
-VKDescriptorHeap::VKDescriptorHeap(const BearDescriptorHeapDescription& Description)
+VKDescriptorHeap::VKDescriptorHeap(const BearDescriptorHeapDescription& description)
 {
 	DescriptorHeapCounter++;
 	CountBuffers = 0;
 	CountSamplers = 0;
 	CountSRVs = 0;
 
-	BEAR_ASSERT(!Description.RootSignature.empty());
+	BEAR_ASSERT(!description.RootSignature.empty());
 
-	const VKRootSignature* RootSig = static_cast<const VKRootSignature*>(Description.RootSignature.get());
+	const VKRootSignature* RootSig = static_cast<const VKRootSignature*>(description.RootSignature.get());
 	{
 
 
-		CountBuffers = static_cast<const VKRootSignature*>(Description.RootSignature.get())->CountBuffers;
-		CountSRVs = static_cast<const VKRootSignature*>(Description.RootSignature.get())->CountSRVs;
-		CountSamplers = static_cast<const VKRootSignature*>(Description.RootSignature.get())->CountSamplers;
-		CountUAVs = static_cast<const VKRootSignature*>(Description.RootSignature.get())->CountUAVs;
+		CountBuffers = static_cast<const VKRootSignature*>(description.RootSignature.get())->CountBuffers;
+		CountSRVs = static_cast<const VKRootSignature*>(description.RootSignature.get())->CountSRVs;
+		CountSamplers = static_cast<const VKRootSignature*>(description.RootSignature.get())->CountSamplers;
+		CountUAVs = static_cast<const VKRootSignature*>(description.RootSignature.get())->CountUAVs;
 
-		memcpy(SlotBuffers, static_cast<const VKRootSignature*>(Description.RootSignature.get())->SlotBuffers, 16 * sizeof(size_t));
-		memcpy(SlotSRVs, static_cast<const VKRootSignature*>(Description.RootSignature.get())->SlotSRVs, 16 * sizeof(size_t));
-		memcpy(SlotUAVs, static_cast<const VKRootSignature*>(Description.RootSignature.get())->SlotUAVs, 16 * sizeof(size_t));
-		memcpy(SlotSamplers, static_cast<const VKRootSignature*>(Description.RootSignature.get())->SlotSamplers, 16 * sizeof(size_t));
+		memcpy(SlotBuffers, static_cast<const VKRootSignature*>(description.RootSignature.get())->SlotBuffers, 16 * sizeof(size_t));
+		memcpy(SlotSRVs, static_cast<const VKRootSignature*>(description.RootSignature.get())->SlotSRVs, 16 * sizeof(size_t));
+		memcpy(SlotUAVs, static_cast<const VKRootSignature*>(description.RootSignature.get())->SlotUAVs, 16 * sizeof(size_t));
+		memcpy(SlotSamplers, static_cast<const VKRootSignature*>(description.RootSignature.get())->SlotSamplers, 16 * sizeof(size_t));
 	}
 
 	{
-		VkDescriptorPoolSize PoolSizes[64];
+		VkDescriptorPoolSize PoolSizes[64] = {};
 		size_t Offset = 0;
 		for (size_t i = 0; i < CountBuffers; i++)
 		{
@@ -38,13 +38,13 @@ VKDescriptorHeap::VKDescriptorHeap(const BearDescriptorHeapDescription& Descript
 		{
 			switch (RootSig->Description.SRVResources[RootSig->SlotSRVs[i]].DescriptorType)
 			{
-			case BearDescriptorType::DT_Buffer:
+			case BearSRVDescriptorType::Buffer:
 				PoolSizes[i + Offset].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 				break;
-			case BearDescriptorType::DT_Image:
+			case BearSRVDescriptorType::Image:
 				PoolSizes[i + Offset].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 				break;
-			case BearDescriptorType::DT_AccelerationStructure:
+			case BearSRVDescriptorType::AccelerationStructure:
 				PoolSizes[i + Offset].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 				break;
 			default:
@@ -58,10 +58,10 @@ VKDescriptorHeap::VKDescriptorHeap(const BearDescriptorHeapDescription& Descript
 		{
 			switch (RootSig->Description.UAVResources[RootSig->SlotSRVs[i]].DescriptorType)
 			{
-			case BearDescriptorType::DT_Buffer:
+			case BearUAVDescriptorType::Buffer:
 				PoolSizes[i + Offset].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 				break;
-			case BearDescriptorType::DT_Image:
+			case BearUAVDescriptorType::Image:
 				PoolSizes[i + Offset].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 				break;
 			default:
@@ -88,7 +88,7 @@ VKDescriptorHeap::VKDescriptorHeap(const BearDescriptorHeapDescription& Descript
 	}
 
 	{
-		RootSignature = Description.RootSignature;
+		RootSignature = description.RootSignature;
 		RootSignaturePointer = static_cast<VKRootSignature*>(RootSignature.get());
 	}
 	{
@@ -117,13 +117,13 @@ VKDescriptorHeap::~VKDescriptorHeap()
 	vkDestroyDescriptorPool(Factory->Device, DescriptorPool, 0);
 }
 
-void VKDescriptorHeap::SetUniformBuffer(size_t slot, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> UniformBuffer, size_t offset)
+void VKDescriptorHeap::SetUniformBuffer(size_t slot, BearFactoryPointer<BearRHI::BearRHIUniformBuffer> uniform_buffer, size_t offset)
 {
-	if (UniformBuffer.empty())return;
+	if (uniform_buffer.empty())return;
 	BEAR_CHECK(slot < 16);
 	/*slot = SlotBuffers[slot];
 	BEAR_CHECK(slot < CountBuffers);*/
-	if (UniformBuffers[slot] == UniformBuffer)
+	if (UniformBuffers[slot] == uniform_buffer)
 	{
 		if (UniformBufferOffsets[slot] == offset)
 		{
@@ -131,10 +131,10 @@ void VKDescriptorHeap::SetUniformBuffer(size_t slot, BearFactoryPointer<BearRHI:
 		}
 
 	}
-	UniformBuffers[slot] = UniformBuffer;
+	UniformBuffers[slot] = uniform_buffer;
 	UniformBufferOffsets[slot] = offset;
 	VkWriteDescriptorSet WriteDescriptorSet = {};
-	auto* buffer = static_cast<const VKUniformBuffer*>(UniformBuffer.get());
+	auto* UniformBuffer = static_cast<const VKUniformBuffer*>(uniform_buffer.get());
 	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	WriteDescriptorSet.pNext = NULL;
 	WriteDescriptorSet.dstSet = DescriptorSet;
@@ -142,9 +142,9 @@ void VKDescriptorHeap::SetUniformBuffer(size_t slot, BearFactoryPointer<BearRHI:
 	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 	VkDescriptorBufferInfo BufferInfo;
-	BufferInfo.buffer = buffer->Buffer;
-	BufferInfo.range = buffer->Stride;
-	BufferInfo.offset = buffer->Stride* offset;
+	BufferInfo.buffer = UniformBuffer->Buffer;
+	BufferInfo.range = UniformBuffer->Stride;
+	BufferInfo.offset = UniformBuffer->Stride* offset;
 
 	WriteDescriptorSet.pBufferInfo = &BufferInfo;
 	WriteDescriptorSet.dstArrayElement = 0;
@@ -152,85 +152,85 @@ void VKDescriptorHeap::SetUniformBuffer(size_t slot, BearFactoryPointer<BearRHI:
 	vkUpdateDescriptorSets(Factory->Device, static_cast<uint32_t>(1), &WriteDescriptorSet, 0, NULL);
 }
 
-void VKDescriptorHeap::SetShaderResource(size_t slot, BearFactoryPointer<BearRHI::BearRHIShaderResource> ShaderResource,size_t offset)
+void VKDescriptorHeap::SetShaderResource(size_t slot, BearFactoryPointer<BearRHI::BearRHIShaderResource> shader_resource,size_t offset)
 {
-	if (ShaderResource.empty())return;
+	if (shader_resource.empty())return;
 	BEAR_CHECK(slot < 16);
 	/*slot = SlotSRVs[slot];
 	BEAR_CHECK(slot < CountSRVs);*/
-	if (ShaderResources[slot] == ShaderResource)
+	if (ShaderResources[slot] == shader_resource)
 	{
 		if (ShaderResourcesOffsets[slot] == offset)return;
 	}
 	ShaderResourcesOffsets[slot] = offset;
-	ShaderResources[slot] = ShaderResource;
+	ShaderResources[slot] = shader_resource;
 	VkWriteDescriptorSet WriteDescriptorSet = {};
 	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	WriteDescriptorSet.pNext = NULL;
 	WriteDescriptorSet.dstSet = DescriptorSet;
 	WriteDescriptorSet.descriptorCount = 1;
-	VKShaderResource* P = reinterpret_cast<VKShaderResource*>(ShaderResource.get()->QueryInterface(VKQ_ShaderResource));
-	BEAR_ASSERT(P);
-	P->SetAsSRV(&WriteDescriptorSet, offset);
+	VKShaderResource* ShaderResource = reinterpret_cast<VKShaderResource*>(shader_resource.get()->QueryInterface(VKQ_ShaderResource));
+	BEAR_ASSERT(ShaderResource);
+	ShaderResource->SetAsSRV(&WriteDescriptorSet, offset);
 	WriteDescriptorSet.dstArrayElement = 0;
 	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(16 + slot);
 	vkUpdateDescriptorSets(Factory->Device, static_cast<uint32_t>(1), &WriteDescriptorSet, 0, NULL);
 }
 
-void VKDescriptorHeap::SetSampler(size_t slot, BearFactoryPointer<BearRHI::BearRHISampler> Sampler)
+void VKDescriptorHeap::SetSampler(size_t slot, BearFactoryPointer<BearRHI::BearRHISampler> sampler)
 {
-	if (Sampler.empty())return;
+	if (sampler.empty())return;
 	BEAR_CHECK(slot < 16);
 	//slot = SlotSamplers[slot];
 //	BEAR_CHECK(slot < CountSamplers);
-	if (Samplers[slot] == Sampler)return;
+	if (Samplers[slot] == sampler)return;
 
-	Samplers[slot] = Sampler;
+	Samplers[slot] = sampler;
 	VkWriteDescriptorSet WriteDescriptorSet = {};
 	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	WriteDescriptorSet.pNext = NULL;
 	WriteDescriptorSet.dstSet = DescriptorSet;
 	WriteDescriptorSet.descriptorCount = 1;
-	auto* buffer = static_cast<const VKSamplerState*>(Sampler.get());
+	auto* Sampler = static_cast<const VKSamplerState*>(sampler.get());
 
 	WriteDescriptorSet.dstArrayElement = 0;
 	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(48 + slot);
-	WriteDescriptorSet.pImageInfo = &buffer->ImageInfo;
+	WriteDescriptorSet.pImageInfo = &Sampler->ImageInfo;
 	WriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 	vkUpdateDescriptorSets(Factory->Device, static_cast<uint32_t>(1), &WriteDescriptorSet, 0, NULL);
 }
 
-void VKDescriptorHeap::SetUnorderedAccess(bsize slot, BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> UnorderedAcces, bsize offset)
+void VKDescriptorHeap::SetUnorderedAccess(bsize slot, BearFactoryPointer<BearRHI::BearRHIUnorderedAccess> unordered_acces, bsize offset)
 {
-	if (UnorderedAcces.empty())return;
+	if (unordered_acces.empty())return;
 	BEAR_CHECK(slot < 16);
 	/*slot = SlotSRVs[slot];
 	BEAR_CHECK(slot < CountSRVs);*/
-	if (UnorderedAccess[slot] == UnorderedAcces)
+	if (UnorderedAccess[slot] == unordered_acces)
 	{
 		if (UnorderedAccessOffsets[slot] == offset)return;
 	}
 	UnorderedAccessOffsets[slot] = offset;
-	UnorderedAccess[slot] = UnorderedAcces;
+	UnorderedAccess[slot] = unordered_acces;
 	VkWriteDescriptorSet WriteDescriptorSet = {};
 	WriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	WriteDescriptorSet.pNext = NULL;
 	WriteDescriptorSet.dstSet = DescriptorSet;
 	WriteDescriptorSet.descriptorCount = 1;
-	VKUnorderedAccess* P = reinterpret_cast<VKUnorderedAccess*>(UnorderedAcces.get()->QueryInterface(VKQ_UnorderedAccess));
-	BEAR_ASSERT(P);
-	P->SetAsUAV(&WriteDescriptorSet, offset);
+	VKUnorderedAccess* UnorderedAcces = reinterpret_cast<VKUnorderedAccess*>(unordered_acces.get()->QueryInterface(VKQ_UnorderedAccess));
+	BEAR_ASSERT(UnorderedAcces);
+	UnorderedAcces->SetAsUAV(&WriteDescriptorSet, offset);
 	WriteDescriptorSet.dstArrayElement = 0;
 	WriteDescriptorSet.dstBinding = static_cast<uint32_t>(32 + slot);
 	vkUpdateDescriptorSets(Factory->Device, static_cast<uint32_t>(1), &WriteDescriptorSet, 0, NULL);
 }
 
-void VKDescriptorHeap::SetGraphics(VkCommandBuffer CommandLine)
+void VKDescriptorHeap::SetGraphics(VkCommandBuffer command_line)
 {
-	vkCmdBindDescriptorSets(CommandLine, VK_PIPELINE_BIND_POINT_GRAPHICS, RootSignaturePointer->PipelineLayout, 0, 1, &DescriptorSet, 0, NULL);
+	vkCmdBindDescriptorSets(command_line, VK_PIPELINE_BIND_POINT_GRAPHICS, RootSignaturePointer->PipelineLayout, 0, 1, &DescriptorSet, 0, NULL);
 }
 
-void VKDescriptorHeap::SetRayTracing(VkCommandBuffer CommandLine)
+void VKDescriptorHeap::SetRayTracing(VkCommandBuffer command_line)
 {
-	vkCmdBindDescriptorSets(CommandLine, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, RootSignaturePointer->PipelineLayout, 0, 1, &DescriptorSet, 0, NULL);
+	vkCmdBindDescriptorSets(command_line, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, RootSignaturePointer->PipelineLayout, 0, 1, &DescriptorSet, 0, NULL);
 }

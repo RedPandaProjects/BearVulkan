@@ -69,6 +69,6 @@ enum EVKQuery
 #include "VKStructuredBuffer.h"
 
 #include "VKPipelineRayTracing.h"
-#include "VKBottomLevel.h"
-#include "VKTopLevel.h"
+#include "VKRayTracingBottomLevel.h"
+#include "VKRayTracingTopLevel.h"
 #include "VKRayTracingShaderTable.h"

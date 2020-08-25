@@ -3,7 +3,7 @@
 
 struct DXCInluder :public IDxcIncludeHandler
 {
-	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** ppvObject) override {
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID , void** ) override {
 		return E_FAIL;
 	}
 	virtual ULONG STDMETHODCALLTYPE AddRef(void)
@@ -20,31 +20,31 @@ struct DXCInluder :public IDxcIncludeHandler
 	BearVector<BearRef<BearBufferedReader>> Readers;
 	BearIncluder* m_Includer;
 	BearVector<IDxcBlobEncoding*> BlobEncodings;
-	DXCInluder(BearIncluder* Includer) :m_Includer(Includer) {}
+	DXCInluder(BearIncluder* includer) :m_Includer(includer) {}
 	~DXCInluder()
 	{
 
 	}
-	virtual HRESULT STDMETHODCALLTYPE LoadSource(LPCWSTR pFilename, IDxcBlob** ppIncludeSource)
+	virtual HRESULT STDMETHODCALLTYPE LoadSource(LPCWSTR filename, IDxcBlob** include_source)
 	{
 		if (m_Includer == nullptr)return E_FAIL;
 
 		BearStringPath Name;
 
-		if (BearString::ExistPossition(pFilename, 0, L".///"))
+		if (BearString::ExistPossition(filename, 0, L".///"))
 		{
-			pFilename += 4;
+			filename += 4;
 		}
-		if (BearString::ExistPossition(pFilename, 0, L"./"))
+		if (BearString::ExistPossition(filename, 0, L"./"))
 		{
-			pFilename += 2;
+			filename += 2;
 		}
 
 		BearString::Copy(Name,
 #ifndef UNICODE
-			* BearEncoding::FastToAnsi(pFilename)
+			* BearEncoding::FastToAnsi(filename)
 #else
-			pFilename
+			filename
 #endif
 		);
 
@@ -65,7 +65,7 @@ struct DXCInluder :public IDxcIncludeHandler
 		}
 
 		BEAR_ASSERT(SUCCEEDED(Factory->DxcLibrary->CreateBlobWithEncodingFromPinned(steam->Begin(), static_cast<UINT32>(steam->Size()), bIsUTF8 ? DXC_CP_UTF8 : DXC_CP_ACP, &PointerTextBlob)));
-		*ppIncludeSource = static_cast<IDxcBlob*>(PointerTextBlob);
+		*include_source = static_cast<IDxcBlob*>(PointerTextBlob);
 		Readers.push_back(steam);
 		BlobEncodings.push_back(PointerTextBlob);
 		return S_OK;
@@ -74,19 +74,19 @@ struct DXCInluder :public IDxcIncludeHandler
 };
 
 extern bool GDebugRender;
-bool VKShader::LoadAsTextDXC(const bchar* Text, const bchar* EntryPoint, const BearMap<BearStringConteniar, BearStringConteniar>& Defines, BearString& OutError, BearIncluder* Includer)
+bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer)
 {
 	bool bIsUTF8 = false;
-	if (BearString::GetSize(Text) > 2)
+	if (BearString::GetSize(text) > 2)
 	{
-		bIsUTF8 = Text[0] == 0xEF;
-		bIsUTF8 = bIsUTF8 && Text[1] == 0xBB;
-		bIsUTF8 = bIsUTF8 && Text[2] == 0xBF;
+		bIsUTF8 = text[0] == 0xEF;
+		bIsUTF8 = bIsUTF8 && text[1] == 0xBB;
+		bIsUTF8 = bIsUTF8 && text[2] == 0xBF;
 
 	}
 
 	IDxcResult* Result;
-	DXCInluder LIncluder(Includer);
+	DXCInluder LIncluder(includer);
 	wchar_t NameFile[1024];
 	swprintf(NameFile, 1024, L"%S", "noname");
 	BearVector<const wchar_t*> Arguments;
@@ -100,15 +100,10 @@ bool VKShader::LoadAsTextDXC(const bchar* Text, const bchar* EntryPoint, const B
 	else
 	{
 	}
-	switch (Type)
+	switch (m_Type)
 	{
 
-	case ST_RayGeneration:
-	case ST_Miss:
-	case ST_Callable:
-	case ST_Intersection:
-	case ST_ClosestHit:
-	case ST_AnyHit:
+	case BearShaderType::RayTracing:
 		Arguments.push_back(L"-fspv-extension=SPV_NV_ray_tracing");
 		Arguments.push_back(L"-Tlib_6_3");
 		break;
@@ -123,7 +118,7 @@ bool VKShader::LoadAsTextDXC(const bchar* Text, const bchar* EntryPoint, const B
 
 	{
 
-		for (auto b = Defines.begin(), e = Defines.end(); b != e; b++)
+		for (auto b = defines.begin(), e = defines.end(); b != e; b++)
 		{
 
 
@@ -142,10 +137,10 @@ bool VKShader::LoadAsTextDXC(const bchar* Text, const bchar* EntryPoint, const B
 			Arguments.push_back(StringForDelete.back());
 		}
 	}
-	//DXCInluder Includer;
+	//DXCInluder includer;
 	DxcBuffer Buffer;
-	Buffer.Ptr = Text;
-	Buffer.Size = BearString::GetSize(Text);
+	Buffer.Ptr = text;
+	Buffer.Size = BearString::GetSize(text);
 	Buffer.Encoding = bIsUTF8 ? DXC_CP_UTF8 : DXC_CP_ACP;
 
 	BEAR_ASSERT(SUCCEEDED(Factory->DxcCompiler->Compile(&Buffer, (LPCWSTR*)Arguments.data(), static_cast<UINT32>(Arguments.size()), &LIncluder, IID_PPV_ARGS(&Result))));
@@ -169,9 +164,9 @@ bool VKShader::LoadAsTextDXC(const bchar* Text, const bchar* EntryPoint, const B
 		errorMsg.append(infoLog.data());
 		PError->Release();
 #ifdef UNICODE
-		OutError.assign(*BearEncoding::FastToUnicode(*errorMsg));
+		out_error.assign(*BearEncoding::FastToUnicode(*errorMsg));
 #else
-		OutError.assign(*errorMsg);
+		out_error.assign(*errorMsg);
 #endif
 		return false;
 	}
@@ -187,7 +182,7 @@ bool VKShader::LoadAsTextDXC(const bchar* Text, const bchar* EntryPoint, const B
 		pShaderName->Release();
 	Result->Release();
 	CreateShader();
-	this->Shader.pName = EntryPoint;
+	this->Shader.pName = entry_point;
 	return true;
 }
 #endif

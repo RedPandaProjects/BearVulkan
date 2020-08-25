@@ -98,6 +98,7 @@ REGISTRATION(vkDeviceWaitIdle)
 REGISTRATION(vkGetSwapchainImagesKHR)
 REGISTRATION(vkCreateShaderModule)
 REGISTRATION(vkGetDeviceProcAddr)
+REGISTRATION(vkCreateBufferView)
 #ifdef DEVELOPER_VERSION
 REGISTRATION_INSTANCE(vkDestroyDebugUtilsMessengerEXT)
 REGISTRATION_INSTANCE(vkCmdBeginDebugUtilsLabelEXT);
