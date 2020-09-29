@@ -41,8 +41,8 @@ VKRayTracingBottomLevel::VKRayTracingBottomLevel(const BearRayTracingBottomLevel
 				BEAR_CHECK(VertexBuffer->VertexDescription.stride);
 				Gometry.geometry.triangles.vertexData = VertexBuffer->Buffer;
 				Gometry.geometry.triangles.vertexStride = VertexBuffer->VertexDescription.stride;
-				Gometry.geometry.triangles.vertexOffset = i.Triangles.VertexOffset;
-				Gometry.geometry.triangles.vertexCount = i.Triangles.VertexCount;
+				Gometry.geometry.triangles.vertexOffset = static_cast<VkDeviceSize>(i.Triangles.VertexOffset);
+				Gometry.geometry.triangles.vertexCount = static_cast<uint32_t>(i.Triangles.VertexCount);
 				Gometry.geometry.triangles.vertexFormat = VKFactory::TranslationForRayTracing(i.Triangles.VertexFormat);
 				BEAR_CHECK(i.Triangles.VertexCount >= VertexBuffer->Size / VertexBuffer->VertexDescription.stride);
 				
@@ -58,8 +58,8 @@ VKRayTracingBottomLevel::VKRayTracingBottomLevel(const BearRayTracingBottomLevel
 				auto IndexBuffer = static_cast<const VKIndexBuffer*>(i.Triangles.IndexBuffer.get());
 				BEAR_CHECK(IndexBuffer->Size);
 				Gometry.geometry.triangles.indexData = IndexBuffer->Buffer;
-				Gometry.geometry.triangles.indexOffset = i.Triangles.IndexOffset;
-				Gometry.geometry.triangles.indexCount = i.Triangles.IndexCount;
+				Gometry.geometry.triangles.indexOffset = static_cast<VkDeviceSize>(i.Triangles.IndexOffset);
+				Gometry.geometry.triangles.indexCount = static_cast<uint32_t>(i.Triangles.IndexCount);
 			}
 		}
 		else
@@ -67,9 +67,9 @@ VKRayTracingBottomLevel::VKRayTracingBottomLevel(const BearRayTracingBottomLevel
 			BEAR_CHECK(!i.AABB.Buffer.empty());
 			auto Buffer = static_cast<const VKStructuredBuffer*>(i.AABB.Buffer.get());
 			Gometry.geometry.aabbs.aabbData = Buffer->Buffer;
-			Gometry.geometry.aabbs.numAABBs = i.AABB.Count;
-			Gometry.geometry.aabbs.offset = i.AABB.Offset;
-			Gometry.geometry.aabbs.stride = i.AABB.Stride;
+			Gometry.geometry.aabbs.numAABBs = static_cast<uint32_t>(i.AABB.Count);
+			Gometry.geometry.aabbs.offset = static_cast<VkDeviceSize>(i.AABB.Offset);
+			Gometry.geometry.aabbs.stride = static_cast<uint32_t>(i.AABB.Stride);
 		}
 		GeometryDescs.emplace_back(Gometry);
 	}
@@ -91,7 +91,6 @@ VKRayTracingBottomLevel::VKRayTracingBottomLevel(const BearRayTracingBottomLevel
 		AccelerationStructureCreateInfo.info = AccelerationStructureInfo;
 		AccelerationStructureCreateInfo.compactedSize = 0;
 
-		VkAccelerationStructureNV accelerationStructure;
 		V_CHK(vkCreateAccelerationStructureNV(Factory->Device, &AccelerationStructureCreateInfo, nullptr,&AccelerationStructure));
 	}
 	bsize ResultSizeInBytes = 0;
@@ -129,7 +128,7 @@ VKRayTracingBottomLevel::VKRayTracingBottomLevel(const BearRayTracingBottomLevel
 		VkMemoryAllocateInfo AllocInfo = {};
 		AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		AllocInfo.allocationSize = ResultSizeInBytes;
-		AllocInfo.memoryTypeIndex = FindMemoryType(Factory->PhysicalDevice, ResultMemoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		AllocInfo.memoryTypeIndex = FindMemoryType(Factory->PhysicalDevice, static_cast<uint32_t>(ResultMemoryTypeBits), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		V_CHK(vkAllocateMemory(Factory->Device, &AllocInfo, nullptr, &ResultBufferMemory));
 	}

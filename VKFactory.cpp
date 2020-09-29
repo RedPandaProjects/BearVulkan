@@ -25,7 +25,7 @@ bool VKFactory::LoadFunctions()
 {
 #define REGISTRATION_INSTANCE(name) 
 #define REGISTRATION_DEVICE(name)
-#define REGISTRATION(name)  name = BearManagerDynamicLibraries::GetFunctionInProject<PFN_##name>(TEXT("vulkan-1"),#name);if(!name)return false;
+#define REGISTRATION(name)  name = BearManagerDynamicLibraries::GetFunctionInProject<PFN_##name>(TEXT("vulkan-1"),TEXT(#name));if(!name)return false;
 #include "VKImports.h"
 	return true;
 }
@@ -57,7 +57,7 @@ bool VKFactory::CreateInstance()
 	InstanceCreateInfo.pNext = NULL;
 	InstanceCreateInfo.flags = 0;
 	InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
-	InstanceCreateInfo.enabledExtensionCount = InstanceExtensions.size();
+	InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(InstanceExtensions.size());
 	InstanceCreateInfo.ppEnabledExtensionNames = InstanceExtensions.data();
 
 #ifdef DEVELOPER_VERSION
@@ -175,7 +175,7 @@ bool VKFactory::CreateDevice()
 	DeviceCreateInfo.pNext = NULL;
 	DeviceCreateInfo.queueCreateInfoCount = 1;
 	DeviceCreateInfo.pQueueCreateInfos = &QueueCreateInfo;
-	DeviceCreateInfo.enabledExtensionCount = DeviceExtensions.size();
+	DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions.size());
 	DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.data();
 	DeviceCreateInfo.enabledLayerCount = 0;
 	DeviceCreateInfo.ppEnabledLayerNames = NULL;
@@ -257,7 +257,7 @@ bool VKFactory::CreateGPU(uint32_t& queue_family_index)
 			if (QueueProps[a].queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
 				PhysicalDevice = i;
-				queue_family_index = a;
+				queue_family_index = static_cast<uint32_t>(a);
 
 				vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
 				vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);

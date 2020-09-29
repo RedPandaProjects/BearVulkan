@@ -28,7 +28,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 				GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
 				GroupInfo.pNext = nullptr;
 				GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-				GroupInfo.generalShader = ShaderList.size();
+				GroupInfo.generalShader =static_cast<uint32_t>( ShaderList.size());
 				GroupInfo.closestHitShader = VK_SHADER_UNUSED_NV;
 				GroupInfo.anyHitShader = VK_SHADER_UNUSED_NV;
 				GroupInfo.intersectionShader = VK_SHADER_UNUSED_NV;
@@ -46,7 +46,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 				GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
 				GroupInfo.pNext = nullptr;
 				GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-				GroupInfo.generalShader = ShaderList.size();
+				GroupInfo.generalShader = static_cast<uint32_t>(ShaderList.size());
 				GroupInfo.closestHitShader = VK_SHADER_UNUSED_NV;
 				GroupInfo.anyHitShader = VK_SHADER_UNUSED_NV;
 				GroupInfo.intersectionShader = VK_SHADER_UNUSED_NV;
@@ -64,7 +64,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 				GroupInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV;
 				GroupInfo.pNext = nullptr;
 				GroupInfo.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-				GroupInfo.generalShader = ShaderList.size();
+				GroupInfo.generalShader = static_cast<uint32_t>(ShaderList.size());
 				GroupInfo.closestHitShader = VK_SHADER_UNUSED_NV;
 				GroupInfo.anyHitShader = VK_SHADER_UNUSED_NV;
 				GroupInfo.intersectionShader = VK_SHADER_UNUSED_NV;
@@ -136,7 +136,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 		{
 			auto Item = ShaderMap.find(i.ClosestHitShaderImport);
 			BEAR_CHECK(Item != ShaderMap.end());
-			GroupInfo.closestHitShader = Item->second;
+			GroupInfo.closestHitShader = static_cast<uint32_t>(Item->second);
 		}
 		else
 		{
@@ -146,7 +146,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 		{
 			auto Item = ShaderMap.find(i.AnyHitShaderImport);
 			BEAR_CHECK(Item != ShaderMap.end());
-			GroupInfo.anyHitShader = Item->second;
+			GroupInfo.anyHitShader = static_cast<uint32_t>(Item->second);
 		}
 		else
 		{
@@ -156,7 +156,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 		{
 			auto Item = ShaderMap.find(i.IntersectionShaderImport);
 			BEAR_CHECK(Item != ShaderMap.end());
-			GroupInfo.intersectionShader = Item->second;
+			GroupInfo.intersectionShader = static_cast<uint32_t>(Item->second);
 		}
 		else
 		{
@@ -184,7 +184,7 @@ VKPipelineRayTracing::VKPipelineRayTracing(const BearPipelineRayTracingDescripti
 	RayPipelineInfo.basePipelineIndex = 0;
 	V_CHK(vkCreateRayTracingPipelinesNV(Factory->Device, VK_NULL_HANDLE, 1, &RayPipelineInfo, nullptr, &Pipeline));
 	ShaderIdentifiers = bear_alloc<uint8>(GroupList.size() * Factory->PhysicalDeviceRayTracingProperties.shaderGroupHandleSize);
-	V_CHK(vkGetRayTracingShaderGroupHandlesNV(Factory->Device, Pipeline, 0, GroupList.size(), GroupList.size()* Factory->PhysicalDeviceRayTracingProperties.shaderGroupHandleSize, *ShaderIdentifiers));
+	V_CHK(vkGetRayTracingShaderGroupHandlesNV(Factory->Device, Pipeline, 0, static_cast<uint32_t>(GroupList.size()), GroupList.size()* Factory->PhysicalDeviceRayTracingProperties.shaderGroupHandleSize, *ShaderIdentifiers));
 
 
 }

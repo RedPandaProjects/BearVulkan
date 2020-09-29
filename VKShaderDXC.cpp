@@ -171,18 +171,18 @@ bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const 
 		return false;
 	}
 
-	IDxcBlob* Shader;
+	IDxcBlob* ShaderBled;
 	IDxcBlobUtf16* pShaderName = nullptr;
-	BEAR_ASSERT(SUCCEEDED(Result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&Shader), &pShaderName)));
-	BEAR_CHECK(Shader->GetBufferSize() % 4 == 0);
-	ShaderOnMemory.resize(Shader->GetBufferSize() / 4);
-	bear_copy(ShaderOnMemory.data(), Shader->GetBufferPointer(), Shader->GetBufferSize());
-	Shader->Release();
+	BEAR_ASSERT(SUCCEEDED(Result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&ShaderBled), &pShaderName)));
+	BEAR_CHECK(ShaderBled->GetBufferSize() % 4 == 0);
+	ShaderOnMemory.resize(ShaderBled->GetBufferSize() / 4);
+	bear_copy(ShaderOnMemory.data(), ShaderBled->GetBufferPointer(), ShaderBled->GetBufferSize());
+	ShaderBled->Release();
 	if(pShaderName)
 		pShaderName->Release();
 	Result->Release();
 	CreateShader();
-	this->Shader.pName = entry_point;
+	Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi( entry_point));
 	return true;
 }
 #endif
