@@ -86,7 +86,7 @@ VKTexture2D::VKTexture2D(size_t width, size_t height, size_t mips, size_t count,
             ViewCreateInfo.subresourceRange.levelCount = 1;
             for (size_t i = 0; i < mips; i++)
             {
-                ViewCreateInfo.subresourceRange.baseMipLevel = i;
+                ViewCreateInfo.subresourceRange.baseMipLevel =static_cast<uint32_t>( i);
                 V_CHK(vkCreateImageView(Factory->Device, &ViewCreateInfo, nullptr, &UAVImageViews[i]));
             }
         }

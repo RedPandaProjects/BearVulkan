@@ -101,7 +101,7 @@ bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, co
 #endif
 	}
 #ifdef UNICODE
-	EntryPointName = *BearEncoding::FastToAnsi(entry_point);
+	m_EntryPointName = *BearEncoding::FastToAnsi(entry_point);
 	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(text), BearString::GetSize(text), shader_kind, "noname", *BearEncoding::FastToAnsi(entry_point), options);
 #else
 	m_EntryPointName = entry_point;
@@ -110,11 +110,11 @@ bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, co
 
 	if (shaderc_result_get_compilation_status(result) == shaderc_compilation_status_compilation_error)
 	{
-		const char* text = shaderc_result_get_error_message(result);
+		const char* Text = shaderc_result_get_error_message(result);
 #ifdef UNICODE
-		out_error = BearEncoding::FastToUnicode(text);
+		out_error = BearEncoding::FastToUnicode(Text);
 #else
-		out_error = text;
+		out_error = Text;
 #endif
 		shaderc_compile_options_release(options);
 		shaderc_result_release(result);
@@ -124,11 +124,11 @@ bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, co
 	}
 	if (shaderc_result_get_num_warnings(result))
 	{
-		const char* text = shaderc_result_get_error_message(result);
+		const char* Text = shaderc_result_get_error_message(result);
 #ifdef UNICODE
-		out_error = BearEncoding::FastToUnicode(text);
+		out_error = BearEncoding::FastToUnicode(Text);
 #else
-		out_error = text;
+		out_error = Text;
 #endif
 	}
 	if (shaderc_result_get_compilation_status(result) != shaderc_compilation_status_success)
@@ -164,6 +164,8 @@ bool VKShader::LoadAsText(const bchar* text, const bchar* entry_point, const Bea
 		return LoadAsTextShaderc(text, entry_point, defines, out_error, includer);
 		break;
 	}
+	BEAR_ASSERT(false);
+	return false;
 }
 
 

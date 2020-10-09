@@ -261,7 +261,7 @@ void VKContext::DispatchRays(bsize count_x, bsize count_y, bsize count_z, BearFa
 {
 #ifdef RTX
 	auto* ShaderTable = static_cast<const VKRayTracingShaderTable*>(shader_table.get());
-	vkCmdTraceRaysNV(m_CommandBuffer, ShaderTable->RayGenerateRecord.Buffer, 0, ShaderTable->MissRecord.Buffer, 0, ShaderTable->MissRecord.Stride, ShaderTable->HitGroups.Buffer, 0, ShaderTable->HitGroups.Stride, ShaderTable->CallableRecord.Buffer, 0, ShaderTable->CallableRecord.Stride, count_x, count_y, count_z);
+	vkCmdTraceRaysNV(m_CommandBuffer, ShaderTable->RayGenerateRecord.Buffer, 0, ShaderTable->MissRecord.Buffer, 0, ShaderTable->MissRecord.Stride, ShaderTable->HitGroups.Buffer, 0, ShaderTable->HitGroups.Stride, ShaderTable->CallableRecord.Buffer, 0, ShaderTable->CallableRecord.Stride, static_cast<uint32_t>(count_x), static_cast<uint32_t>(count_y), static_cast<uint32_t>(count_z));
 #endif
 }
 

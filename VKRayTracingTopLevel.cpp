@@ -48,7 +48,7 @@ VKRayTracingTopLevel::VKRayTracingTopLevel(const BearRayTracingTopLevelDescripti
 		AccelerationStructureInfo.pNext = VK_NULL_HANDLE;
 		AccelerationStructureInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
 		AccelerationStructureInfo.flags = 0;
-		AccelerationStructureInfo.instanceCount = InstanceDescs.size();
+		AccelerationStructureInfo.instanceCount = static_cast<uint32_t>(InstanceDescs.size());
 		AccelerationStructureInfo.geometryCount = 0;;
 
 		VkAccelerationStructureCreateInfoNV AccelerationStructureCreateInfo = {};
@@ -57,7 +57,6 @@ VKRayTracingTopLevel::VKRayTracingTopLevel(const BearRayTracingTopLevelDescripti
 		AccelerationStructureCreateInfo.info = AccelerationStructureInfo;
 		AccelerationStructureCreateInfo.compactedSize = 0;
 
-		VkAccelerationStructureNV accelerationStructure;
 		V_CHK(vkCreateAccelerationStructureNV(Factory->Device, &AccelerationStructureCreateInfo, nullptr, &AccelerationStructure));
 	}
 	bsize ResultSizeInBytes = 0;
@@ -95,7 +94,7 @@ VKRayTracingTopLevel::VKRayTracingTopLevel(const BearRayTracingTopLevelDescripti
 		VkMemoryAllocateInfo AllocInfo = {};
 		AllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		AllocInfo.allocationSize = ResultSizeInBytes;
-		AllocInfo.memoryTypeIndex = FindMemoryType(Factory->PhysicalDevice, ResultMemoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		AllocInfo.memoryTypeIndex = FindMemoryType(Factory->PhysicalDevice, static_cast<uint32_t>(ResultMemoryTypeBits), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		V_CHK(vkAllocateMemory(Factory->Device, &AllocInfo, nullptr, &ResultBufferMemory));
 	}

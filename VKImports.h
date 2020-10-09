@@ -119,3 +119,4 @@ REGISTRATION_DEVICE(vkDestroyAccelerationStructureNV);
 #endif
 #undef REGISTRATION
 #undef REGISTRATION_DEVICE
+#undef REGISTRATION_INSTANCE
