@@ -335,6 +335,7 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), m_CommandPool
 
 		V_CHK(vkCreateSampler(Device, &SamplerCreateInfo, nullptr, &DefaultSampler));
 }
+
 #ifdef RTX
 	if (bSupportRayTracing)
 	{
@@ -346,8 +347,11 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), m_CommandPool
 		Properties.pNext = &PhysicalDeviceRayTracingProperties;
 		vkGetPhysicalDeviceProperties2(PhysicalDevice, &Properties);
 	}
+
+#ifdef DEVELOPER_VERSION
 	BEAR_ASSERT(SUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&DxcCompiler))));
 	BEAR_ASSERT(SUCCEEDED(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&DxcLibrary))));
+#endif
 #endif
 
 	/*	{
@@ -364,9 +368,12 @@ VKFactory::VKFactory() :Instance(0), PhysicalDevice(0), Device(0), m_CommandPool
 VKFactory::~VKFactory()
 {
 	{
+
+#ifdef DEVELOPER_VERSION
 #ifdef RTX
 		DxcCompiler->Release();
 		DxcLibrary->Release();
+#endif
 #endif
 	}
 	if(m_CommandPool)

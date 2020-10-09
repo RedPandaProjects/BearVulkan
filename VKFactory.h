@@ -90,8 +90,10 @@ private:
 #endif
 public:
 #ifdef RTX
+#ifdef DEVELOPER_VERSION
 	IDxcCompiler3* DxcCompiler;
 	IDxcLibrary* DxcLibrary;
+#endif
 #endif
 public:
 #ifdef RTX

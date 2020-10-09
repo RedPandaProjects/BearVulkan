@@ -1,4 +1,6 @@
 #include "VKPCH.h"
+
+#ifdef DEVELOPER_VERSION
 #ifdef RTX
 
 struct DXCInluder :public IDxcIncludeHandler
@@ -185,4 +187,5 @@ bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const 
 	this->Shader.pName = entry_point;
 	return true;
 }
+#endif
 #endif
