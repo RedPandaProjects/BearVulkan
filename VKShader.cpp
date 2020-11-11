@@ -37,7 +37,7 @@ static void CallbackInclduerRelease(void* user_data, shaderc_include_result* inc
 	bear_free(include_result);
 }
 extern bool GDebugRender;
-bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer)
+bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer, const bchar* file_name, const bchar* out_pdb)
 {
 	shaderc_compiler_t compiler = shaderc_compiler_initialize();
 	shaderc_compile_options_t options = shaderc_compile_options_initialize();
@@ -100,12 +100,19 @@ bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, co
 		shaderc_compile_options_add_macro_definition(options, *b->first, b->first.size(), *b->second, b->second.size());
 #endif
 	}
+	BearStringAnsi FileName = !file_name ? "noname" :
+#ifdef UNICODE
+	(BearEncoding::ToAnsi(file_name));
+#else
+		(file_name);
+#endif
+
 #ifdef UNICODE
 	m_EntryPointName = *BearEncoding::FastToAnsi(entry_point);
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(text), BearString::GetSize(text), shader_kind, "noname", *BearEncoding::FastToAnsi(entry_point), options);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, *BearEncoding::FastToAnsi(text), BearString::GetSize(text), shader_kind, *FileName, *BearEncoding::FastToAnsi(entry_point), options);
 #else
 	m_EntryPointName = entry_point;
-	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, text, strlen(text), shader_kind, "noname", entry_point, options);
+	shaderc_compilation_result_t result = shaderc_compile_into_spv(compiler, text, strlen(text), shader_kind, *FileName, entry_point, options);
 #endif
 
 	if (shaderc_result_get_compilation_status(result) == shaderc_compilation_status_compilation_error)
@@ -148,7 +155,7 @@ bool VKShader::LoadAsTextShaderc(const bchar* text, const bchar* entry_point, co
 
 	return true;
 }
-bool VKShader::LoadAsText(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer)
+bool VKShader::LoadAsText(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer, const bchar* file_name, const bchar* out_pdb)
 {
 	switch (m_Type)
 	{
@@ -158,10 +165,10 @@ bool VKShader::LoadAsText(const bchar* text, const bchar* entry_point, const Bea
 		break;
 #ifdef RTX
 	case BearShaderType::RayTracing:
-		return LoadAsTextDXC(text, entry_point, defines, out_error, includer);
+		return LoadAsTextDXC(text, entry_point, defines, out_error, includer, file_name, out_pdb);
 #endif
 	default:
-		return LoadAsTextShaderc(text, entry_point, defines, out_error, includer);
+		return LoadAsTextShaderc(text, entry_point, defines, out_error, includer, file_name, out_pdb);
 		break;
 	}
 	BEAR_ASSERT(false);

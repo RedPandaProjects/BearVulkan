@@ -76,7 +76,7 @@ struct DXCInluder :public IDxcIncludeHandler
 };
 
 extern bool GDebugRender;
-bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer)
+bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const BearMap<BearStringConteniar, BearStringConteniar>& defines, BearString& out_error, BearIncluder* includer, const bchar* file_name,const bchar*out_pdb)
 {
 	bool bIsUTF8 = false;
 	if (BearString::GetSize(text) > 2)
@@ -89,8 +89,6 @@ bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const 
 
 	IDxcResult* Result;
 	DXCInluder LIncluder(includer);
-	wchar_t NameFile[1024];
-	swprintf(NameFile, 1024, L"%S", "noname");
 	BearVector<const wchar_t*> Arguments;
 	BearVector<wchar_t*> StringForDelete;
 	Arguments.push_back(L"-spirv");
@@ -140,6 +138,19 @@ bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const 
 		}
 	}
 	//DXCInluder includer;
+
+	if (out_pdb)
+	{
+		Arguments.push_back(L"-Fd");
+		BearStringUnicode NameFile;
+#ifdef UNICODE
+		NameFile = file_name;
+#else
+		NameFile = *BearEncoding::FastToUnicode(out_pdb);
+#endif
+		StringForDelete.push_back(BearString::Duplicate(*NameFile));
+		Arguments.push_back(StringForDelete.back());
+	}
 	DxcBuffer Buffer;
 	Buffer.Ptr = text;
 	Buffer.Size = BearString::GetSize(text);
@@ -184,7 +195,13 @@ bool VKShader::LoadAsTextDXC(const bchar* text, const bchar* entry_point, const 
 		pShaderName->Release();
 	Result->Release();
 	CreateShader();
-	Shader.pName = BearStringConteniarAnsi::Reserve(*BearEncoding::FastToAnsi( entry_point));
+	Shader.pName = BearStringConteniarAnsi::Reserve(
+#ifdef UNICODE
+		* BearEncoding::FastToAnsi(entry_point)
+#else
+		entry_point
+#endif
+	);
 	return true;
 }
 #endif
