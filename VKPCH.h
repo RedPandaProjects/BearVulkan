@@ -4,7 +4,7 @@
 ///////////Configure/////////////////
 /////////////////////////////////////
 #ifdef VK_11
-#ifdef X64
+#if CURRENT_PROCCESOR == PROCCESOR_AMD64
 #define RTX
 #endif
 #endif
@@ -19,7 +19,7 @@
 #include "shaderc/shaderc.hpp"
 #endif
 
-#ifdef WINDOWS
+#if CURRENT_PLATFORM == PLATFORM_WINDOWS
 #ifndef VK_USE_PLATFORM_WIN32_KHR
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif

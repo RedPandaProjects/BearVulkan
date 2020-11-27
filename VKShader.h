@@ -14,7 +14,7 @@ private:
 #endif
 public:
 	virtual void* GetPointer();
-	virtual	size_t GetSize();
+	virtual	bsize GetSize();
 #endif
 	virtual	void LoadAsBinary(void* data, size_t size);
 	BearVector<uint32> ShaderOnMemory;
